@@ -27,7 +27,7 @@ namespace Microsoft.Bot.Sample.SimpleEchoBot
                 int qusetionId = context.ConversationData.GetValueOrDefault<int>(KEY_ID);
                 if (qusetionId == 0)
                 {
-                    await context.PostAsync("Hello, I'll post some random question every morning.");
+                    await context.PostAsync("Hello, I'll post some random question every morning. Type `help` to see available commands.");
                 }
 
                 await PostNewQuestion(context, "Hi all! Here is the today question: ");
@@ -62,9 +62,7 @@ namespace Microsoft.Bot.Sample.SimpleEchoBot
             {
                 await context.PostAsync("Commands: " + Environment.NewLine +
                     "\t\t  - type `question` to get a new question;" + Environment.NewLine +
-                    "\t\t  - type `answer` to get an answer to the current question;" + Environment.NewLine +
-                    "\t\t  - type `help` to get the help;"
-                    );
+                    "\t\t  - type `answer` to get an answer to the current question;" + Environment.NewLine);
             }
 
             context.Wait(MessageReceivedAsync);
