@@ -11,7 +11,6 @@ using Microsoft.Bot.Sample.SimpleEchoBot.Dialogs;
 
 namespace Microsoft.Bot.Sample.SimpleEchoBot
 {
-    [BotAuthentication]
     public class MessagesController : ApiController
     {
         /// <summary>
@@ -19,6 +18,7 @@ namespace Microsoft.Bot.Sample.SimpleEchoBot
         /// receive a message from a user and send replies
         /// </summary>
         /// <param name="activity"></param>
+        [BotAuthentication]
         [ResponseType(typeof(void))]
         public virtual async Task<HttpResponseMessage> Post([FromBody] Activity activity)
         {
@@ -34,6 +34,7 @@ namespace Microsoft.Bot.Sample.SimpleEchoBot
             return new HttpResponseMessage(HttpStatusCode.Accepted);
         }
 
+        [AllowAnonymous]
         public async Task<IHttpActionResult> Put()
         {
             try
