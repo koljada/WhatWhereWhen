@@ -185,6 +185,7 @@
   <ItemGroup>
     <Content Include="packages.config" />
     <None Include="Properties\PublishProfiles\whatwherewhendailyquestion-Web-Deploy.pubxml" />
+    <Content Include="Properties\webjobs-list.json" />
     <None Include="Web.Debug.config">
       <DependentUpon>Web.config</DependentUpon>
     </None>
@@ -238,4 +239,5 @@
   <Import Project="PostDeployScripts\IncludeSources.targets" Condition="Exists('PostDeployScripts\IncludeSources.targets')" />
   <Import Project="..\PostDeployScripts\IncludeSources.targets" Condition="Exists('..\PostDeployScripts\IncludeSources.targets')" />
   <Import Project="packages\Microsoft.Azure.DocumentDB.1.22.0\build\Microsoft.Azure.DocumentDB.targets" Condition="Exists('packages\Microsoft.Azure.DocumentDB.1.22.0\build\Microsoft.Azure.DocumentDB.targets')" />
+  <Import Project="packages\Microsoft.Web.WebJobs.Publish.1.1.0\tools\webjobs.targets" Condition="Exists('packages\Microsoft.Web.WebJobs.Publish.1.1.0\tools\webjobs.targets')" />
 </Project>
