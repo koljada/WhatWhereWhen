@@ -1,11 +1,13 @@
 using Autofac;
 using System.Web.Http;
-using System.Configuration;
 using System.Reflection;
 using Microsoft.Bot.Builder.Azure;
 using Microsoft.Bot.Builder.Dialogs;
 using Microsoft.Bot.Builder.Dialogs.Internals;
 using Microsoft.Bot.Connector;
+using System.Web.Routing;
+using System.Web.Optimization;
+using System.Configuration;
 
 namespace SimpleEchoBot
 {
@@ -39,7 +41,10 @@ namespace SimpleEchoBot
                         .SingleInstance();
 
                 });
+
             GlobalConfiguration.Configure(WebApiConfig.Register);
+            RouteConfig.RegisterRoutes(RouteTable.Routes);
+            BundleConfig.RegisterBundles(BundleTable.Bundles);
         }
     }
 }
