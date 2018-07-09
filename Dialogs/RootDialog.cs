@@ -33,7 +33,7 @@ namespace SimpleEchoBot.Dialogs
 
             string text = message.Text.Trim().ToLower();
 
-            if (text == "help")
+            if (text.EndsWith("help"))
             {
                 await context.PostAsync("Commands: " + Environment.NewLine +
                     "\t\t  - type `question` to get a new question;" + Environment.NewLine +

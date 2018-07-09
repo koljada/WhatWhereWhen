@@ -41,7 +41,7 @@ namespace SimpleEchoBot.Dialogs
 
             string text = message.Text.Trim().ToLower();
 
-            if (text == "answer" || text == "a")
+            if (text.EndsWith("answer") || text.EndsWith("-a"))
             {
                 string answer = context.ConversationData.GetValue<string>(KEY_ANSWER);
                 string source = context.ConversationData.GetValue<string>(KEY_SOURCE);
@@ -65,15 +65,15 @@ namespace SimpleEchoBot.Dialogs
 
                 context.Call(new QuestionDialog(), Finish);
             }
-            else if (text == "question" || text == "q")
+            else if (text.EndsWith("question") || text.EndsWith("-q"))
             {
                 context.Call(new QuestionDialog(), Finish);
             }
-            else if (text == "help")
+            else if (text.EndsWith("help"))
             {
                 await context.PostAsync("Commands: " + Environment.NewLine +
-                    "\t\t  - type `question` or `q` to get a new question;" + Environment.NewLine +
-                    "\t\t  - type `answer` or `a` to get an answer to the current question;" + Environment.NewLine);
+                    "\t\t  - type `question` to get a new question;" + Environment.NewLine +
+                    "\t\t  - type `answer` to get an answer to the current question;" + Environment.NewLine);
 
                 context.Wait(MessageReceivedAsync);
             }
