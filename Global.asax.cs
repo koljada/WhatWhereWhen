@@ -8,6 +8,7 @@ using Microsoft.Bot.Connector;
 using System.Web.Routing;
 using System.Web.Optimization;
 using System.Configuration;
+using System;
 
 namespace SimpleEchoBot
 {
@@ -45,6 +46,6 @@ namespace SimpleEchoBot
             GlobalConfiguration.Configure(WebApiConfig.Register);
             RouteConfig.RegisterRoutes(RouteTable.Routes);
             BundleConfig.RegisterBundles(BundleTable.Bundles);
-        }
+        }        
     }
 }

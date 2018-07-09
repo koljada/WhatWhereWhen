@@ -8,6 +8,7 @@ using System.Net.Http;
 using System.Net;
 using System;
 using Microsoft.Bot.Sample.SimpleEchoBot.Dialogs;
+using SimpleEchoBot.Dialogs;
 
 namespace Microsoft.Bot.Sample.SimpleEchoBot
 {
@@ -26,9 +27,9 @@ namespace Microsoft.Bot.Sample.SimpleEchoBot
             if (activity != null && activity.GetActivityType() == ActivityTypes.Message)
             {
                 await Conversation.SendAsync(activity, () => new RootDialog());
-            }
+            }           
             else
-            {
+            {                
                 HandleSystemMessage(activity);
             }
             return new HttpResponseMessage(HttpStatusCode.Accepted);
@@ -39,16 +40,9 @@ namespace Microsoft.Bot.Sample.SimpleEchoBot
         {
             try
             {
-                if (ConversationStarter.IsSet)
-                {
-                    await ConversationStarter.Resume();
+                await ConversationStarter.Resume();
 
-                    return Ok();
-                }
-                else
-                {
-                    return StatusCode(HttpStatusCode.NoContent);
-                }
+                return Ok();
             }
             catch (Exception ex)
             {
