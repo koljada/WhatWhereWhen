@@ -15,8 +15,10 @@ namespace SimpleEchoBot.Dialogs
     public class QuestionDialog : IDialog<object>
     {
         private const string KEY = "CURRENT_QUESTION";
+        private const string KEY_LEVEL = "CURRENT_LEVEL";
 
         private readonly bool _withTitle = true;
+        private readonly string NL = Environment.NewLine;
 
         [NonSerialized]
         private readonly IQuestionData _questionData;
@@ -33,14 +35,7 @@ namespace SimpleEchoBot.Dialogs
 
         public async Task StartAsync(IDialogContext context)
         {
-            try
-            {
-                await PostNewQuestion(context, _withTitle ? "Here is today's question: " : "");
-            }
-            catch (Exception ex)
-            {
-                await context.PostAsync(ex.Message);
-            }
+            await PostNewQuestion(context, _withTitle ? "Here is today's question: " : "");
 
             context.Wait(MessageReceivedAsync);
         }
@@ -51,7 +46,7 @@ namespace SimpleEchoBot.Dialogs
 
             string text = message.Text.Trim().ToLower();
 
-            if (text.EndsWith("answer") || text.EndsWith("-a"))
+            if (text.Contains("answer"))
             {
                 QuestionItem q = context.ConversationData.GetValue<QuestionItem>(KEY);
 
@@ -61,34 +56,44 @@ namespace SimpleEchoBot.Dialogs
 
                 q.Answer = Regex.Replace(q.Answer, "\\(pic: (.*)\\)", "");
 
-                reply.Text = "> " + q.Question + Environment.NewLine + Environment.NewLine +
-                                    "Answer: " + Environment.NewLine + q.Answer;
+                reply.Text = "> " + q.Question + NL + NL +
+                                    "Answer: " + NL + q.Answer + NL + NL +
+                                    "Source: " + NL + q.Sources;
 
                 reply.ReplyToId = q.Id.ToString();
 
                 await context.PostAsync(reply);
 
-                context.Call(new QuestionDialog(false), Finish);
+                if (!text.Contains("-off"))
+                {
+                    context.Call(new QuestionDialog(false), Finish);
+                }
             }
-            else if (text.EndsWith("question") || text.EndsWith("-q"))
+            else if (text.Contains("new"))
             {
                 context.Call(new QuestionDialog(false), Finish);
             }
-            else if (text.EndsWith("help"))
+            else if (text.Contains("level "))
             {
-                await context.PostAsync("Commands: " + Environment.NewLine +
-                    "\t\t  - type `question` to get a new question;" + Environment.NewLine +
-                    "\t\t  - type `answer` to get an answer to the current question;" + Environment.NewLine);
+                var match = Regex.Match(text, "level(\\s)+([0-5])");
+                if (match.Success)
+                {
+                    string value = match.Groups[2].Value;
+                    context.ConversationData.SetValue(KEY_LEVEL, byte.Parse(value));
+
+                    await context.PostAsync("Level is set up to " + value);
+                }
+                else await context.PostAsync("Level must be within [0-5] range");
+            }
+            else
+            {
+                await context.PostAsync("Sorry, I did not get it." + NL + NL + Constants.HELP);
 
                 context.Wait(MessageReceivedAsync);
             }
         }
 
-        private async Task Finish(IDialogContext context, IAwaitable<object> result)
-        {
-            object t = await result;
-            context.Done(t);
-        }
+        private async Task Finish(IDialogContext context, IAwaitable<object> result) => context.Done(await result);
 
         private IList<Attachment> GetAttachments(string text, string name)
         {
@@ -112,7 +117,9 @@ namespace SimpleEchoBot.Dialogs
         {
             string conversationId = context.MakeMessage().Conversation.Id;
 
-            QuestionItem newQuestion = await _questionData.GetRandomQuestion(conversationId);
+            byte level = context.ConversationData.GetValueOrDefault<byte>(KEY_LEVEL);
+
+            QuestionItem newQuestion = await _questionData.GetRandomQuestion(conversationId, (QuestionComplexity)level);
 
             if (newQuestion != null)
             {

@@ -2,7 +2,8 @@
 {
     public enum QuestionComplexity : byte
     {
-        VeryEasy = 1,
+        Any,
+        VeryEasy,
         Easy,
         Middle,
         Hard,

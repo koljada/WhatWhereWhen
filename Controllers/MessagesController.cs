@@ -7,7 +7,6 @@ using System.Web.Http.Description;
 using System.Net.Http;
 using System.Net;
 using System;
-using Microsoft.Bot.Sample.SimpleEchoBot.Dialogs;
 using SimpleEchoBot.Dialogs;
 
 namespace Microsoft.Bot.Sample.SimpleEchoBot
@@ -27,9 +26,9 @@ namespace Microsoft.Bot.Sample.SimpleEchoBot
             if (activity != null && activity.GetActivityType() == ActivityTypes.Message)
             {
                 await Conversation.SendAsync(activity, () => new RootDialog());
-            }           
+            }
             else
-            {                
+            {
                 HandleSystemMessage(activity);
             }
             return new HttpResponseMessage(HttpStatusCode.Accepted);

@@ -7,15 +7,13 @@ using Microsoft.Bot.Connector;
 using Newtonsoft.Json;
 using Autofac;
 using Microsoft.Bot.Builder.ConnectorEx;
-using Microsoft.Bot.Sample.SimpleEchoBot;
 using Microsoft.WindowsAzure.Storage.Table;
 using Microsoft.WindowsAzure.Storage;
 using System.Configuration;
 using System.Collections.Generic;
 using System.Linq;
-using SimpleEchoBot.Dialogs;
 
-namespace Microsoft.Bot.Sample.SimpleEchoBot.Dialogs
+namespace SimpleEchoBot.Dialogs
 {
     public class ConversationStarter
     {
@@ -66,30 +64,29 @@ namespace Microsoft.Bot.Sample.SimpleEchoBot.Dialogs
 
         public static async Task Resume(ConversationHistory history)
         {
-            Activity message = JsonConvert.DeserializeObject<ConversationReference>(history.Conversation).GetPostToBotMessage();
-            ConnectorClient client = new ConnectorClient(new Uri(message.ServiceUrl));
-
-            using (ILifetimeScope scope = DialogModule.BeginLifetimeScope(Conversation.Container, message))
+            try
             {
-                IBotData botData = scope.Resolve<IBotData>();
-                await botData.LoadAsync(CancellationToken.None);
+                Activity message = JsonConvert.DeserializeObject<ConversationReference>(history.Conversation).GetPostToBotMessage();
+                ConnectorClient client = new ConnectorClient(new Uri(message.ServiceUrl));
 
-                IDialogTask task = scope.Resolve<IDialogTask>();
+                using (ILifetimeScope scope = DialogModule.BeginLifetimeScope(Conversation.Container, message))
+                {
+                    IBotData botData = scope.Resolve<IBotData>();
+                    await botData.LoadAsync(CancellationToken.None);
 
-                //var tt = botData.ConversationData.TryGetValue("t", out Guid y);
-                //var m = Activity.CreateMessageActivity();
-                //m.Text = "question";
-                //task.Post(m, null);
-                //task.Wait(null);
-                QuestionDialog dialog = new QuestionDialog();
-                task.Call(dialog.Void<object, IMessageActivity>(), null);
-                //task.Call(dialog.PostEvent(Activity.CreateMessageActivity()), null);
+                    IDialogTask task = scope.Resolve<IDialogTask>();
 
-                await task.PollAsync(CancellationToken.None);
+                    QuestionDialog dialog = new QuestionDialog();
+                    task.Call(dialog.Void<object, IMessageActivity>(), null);
 
-                //flush dialog stack
-                await botData.FlushAsync(CancellationToken.None);
+                    await task.PollAsync(CancellationToken.None);
+
+                    //flush dialog stack
+                    await botData.FlushAsync(CancellationToken.None);
+                }
             }
+            catch (Exception ex)
+            { }
         }
     }
 

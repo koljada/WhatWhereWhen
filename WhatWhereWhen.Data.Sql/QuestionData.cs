@@ -25,12 +25,12 @@ namespace WhatWhereWhen.Data.Sql
                                 LEFT JOIN [cgk].[QuestionConversation] QC ON Q.Id = QC.QuestionId AND QC.ConversationId = @conversationId
                                 WHERE QC.ConversationId IS NULL";
 
-                if (complexity.HasValue)
+                if (complexity > 0)
                 {
                     sql += $" AND Q.Complexity = " + (byte)complexity;
                 }
 
-                var result = await connection.QueryFirstOrDefaultAsync<QuestionItem>(sql, new { conversationId });
+                var result = await connection.QueryFirstOrDefaultAsync<QuestionItem>(sql + " ORDER BY newid()", new { conversationId });
 
                 if (result != null && markAsRead)
                 {
