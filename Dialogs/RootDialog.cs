@@ -43,8 +43,17 @@ namespace SimpleEchoBot.Dialogs
             }
             else
             {
-                ConversationStarter.SaveConversation(message);
-                context.Call(new QuestionDialog(), After);
+                try
+                {
+                    ConversationStarter.SaveConversation(message);
+
+                    context.Call(new QuestionDialog(), After);
+                }
+                catch (Exception ex)
+                {
+                    var t = 12;
+                    throw;
+                }
             }
         }
 

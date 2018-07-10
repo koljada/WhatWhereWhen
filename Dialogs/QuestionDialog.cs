@@ -1,31 +1,41 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
+﻿using Microsoft.Bot.Builder.Dialogs;
 using Microsoft.Bot.Connector;
-using Microsoft.Bot.Builder.Dialogs;
+using System;
+using System.Collections.Generic;
 using System.Net.Http;
-using Microsoft.Bot.Sample.SimpleEchoBot.Models;
-using Microsoft.WindowsAzure.Storage;
-using Microsoft.WindowsAzure.Storage.Table;
-using System.Configuration;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using WhatWhereWhen.Data.Sql;
+using WhatWhereWhen.Domain.Interfaces;
+using WhatWhereWhen.Domain.Models;
 
 namespace SimpleEchoBot.Dialogs
 {
     [Serializable]
     public class QuestionDialog : IDialog<object>
     {
-        private const string KEY_ID = "QuestionId";
-        private const string KEY_QUESTION = "Question";
-        private const string KEY_ANSWER = "Answer";
-        private const string KEY_ANSWER_PICTURE_URL = "AnswerPicureUrl";
-        private const string KEY_SOURCE = "Source";
+        private const string KEY = "CURRENT_QUESTION";
+
+        private readonly bool _withTitle = true;
+
+        [NonSerialized]
+        private readonly IQuestionData _questionData;
+
+        public QuestionDialog()
+        {
+            _questionData = new QuestionDataSql();
+        }
+
+        public QuestionDialog(bool withTitle) : this()
+        {
+            _withTitle = withTitle;
+        }
 
         public async Task StartAsync(IDialogContext context)
         {
             try
             {
-                await PostNewQuestion(context, "Here is today's question: ");
+                await PostNewQuestion(context, _withTitle ? "Here is today's question: " : "");
             }
             catch (Exception ex)
             {
@@ -43,31 +53,26 @@ namespace SimpleEchoBot.Dialogs
 
             if (text.EndsWith("answer") || text.EndsWith("-a"))
             {
-                string answer = context.ConversationData.GetValue<string>(KEY_ANSWER);
-                string source = context.ConversationData.GetValue<string>(KEY_SOURCE);
-                string question = context.ConversationData.GetValue<string>(KEY_QUESTION);
-                long questionId = context.ConversationData.GetValue<long>(KEY_ID);
+                QuestionItem q = context.ConversationData.GetValue<QuestionItem>(KEY);
 
                 IMessageActivity reply = context.MakeMessage();
 
-                string answerUrl = null;
-                if (context.ConversationData.TryGetValue(KEY_ANSWER_PICTURE_URL, out answerUrl))
-                {
-                    reply.Attachments = new List<Attachment> { new Attachment("image/png", answerUrl) };
-                }
+                reply.Attachments = GetAttachments(q.Answer, "Answer");
 
-                reply.Text = "> " + question + Environment.NewLine + Environment.NewLine + 
-                                    "Answer: " + Environment.NewLine + answer;
+                q.Answer = Regex.Replace(q.Answer, "\\(pic: (.*)\\)", "");
 
-                reply.ReplyToId = questionId.ToString();
+                reply.Text = "> " + q.Question + Environment.NewLine + Environment.NewLine +
+                                    "Answer: " + Environment.NewLine + q.Answer;
+
+                reply.ReplyToId = q.Id.ToString();
 
                 await context.PostAsync(reply);
 
-                context.Call(new QuestionDialog(), Finish);
+                context.Call(new QuestionDialog(false), Finish);
             }
             else if (text.EndsWith("question") || text.EndsWith("-q"))
             {
-                context.Call(new QuestionDialog(), Finish);
+                context.Call(new QuestionDialog(false), Finish);
             }
             else if (text.EndsWith("help"))
             {
@@ -85,61 +90,46 @@ namespace SimpleEchoBot.Dialogs
             context.Done(t);
         }
 
+        private IList<Attachment> GetAttachments(string text, string name)
+        {
+            var result = new List<Attachment>();
+            string regexpPattern = "\\(pic: (.*)\\)";
+            string baseUrl = "https://db.chgk.info/images/db/";
+
+            var mathces = Regex.Matches(text, regexpPattern);
+
+            foreach (Match match in mathces)
+            {
+                string url = match.Groups[1].Value;
+                string ext = url.Split('.')[1];
+                result.Add(new Attachment("image/" + ext, baseUrl + url, null, name));
+            }
+
+            return result;
+        }
+
         private async Task PostNewQuestion(IDialogContext context, string text)
         {
-            QuestionItem newQuestion = GetQuestion();
+            string conversationId = context.MakeMessage().Conversation.Id;
+
+            QuestionItem newQuestion = await _questionData.GetRandomQuestion(conversationId);
+
             if (newQuestion != null)
             {
-                context.ConversationData.SetValue(KEY_ID, newQuestion.QuestionId);
-                context.ConversationData.SetValue(KEY_QUESTION, newQuestion.Question);
-                context.ConversationData.SetValue(KEY_ANSWER, newQuestion.Answer);
-                if (newQuestion.AnswerPictureUrl != null)
-                {
-                    context.ConversationData.SetValue(KEY_ANSWER_PICTURE_URL, newQuestion.AnswerPictureUrl);
-                }
-                context.ConversationData.SetValue(KEY_SOURCE, newQuestion.Sources);
+                context.ConversationData.SetValue(KEY, newQuestion);
 
-                var message = context.MakeMessage();
-                message.Id = newQuestion.QuestionId.ToString();
-                if (newQuestion.QuestonPictureUrl != null)
-                {
-                    message.Attachments = new List<Attachment>
-                    {
-                        new Attachment("image/png", newQuestion.QuestonPictureUrl, null)
-                    };
-                }
+                IMessageActivity message = context.MakeMessage();
+
+                message.Id = newQuestion.Id.ToString();
+
+                message.Attachments = GetAttachments(newQuestion.Question, "Question");
+
+                newQuestion.Question = Regex.Replace(newQuestion.Question, "\\(pic: (.*)\\)", "");
+
                 message.Text = text + Environment.NewLine + newQuestion.Question;
 
                 await context.PostAsync(message);
             }
-        }
-
-        private QuestionItem GetQuestion()
-        {
-            string connStr = ConfigurationManager.ConnectionStrings["DefaultConnection"].ConnectionString;
-            CloudStorageAccount storageAccount = CloudStorageAccount.Parse(connStr);
-            CloudTableClient tableClient = storageAccount.CreateCloudTableClient();
-            CloudTable table = tableClient.GetTableReference("Questions");
-            table.CreateIfNotExists();
-
-            var question = table.CreateQuery<QuestionItem>()
-                .Where(x => x.PartitionKey == "False")
-                .Take(1)
-                .ToList()
-                .FirstOrDefault();
-
-            if (question != null)
-            {
-                var copy = question.Copy();
-
-                TableOperation insertOperation = TableOperation.Insert(copy);
-                table.Execute(insertOperation);
-
-                TableOperation deleteOperation = TableOperation.Delete(question);
-                table.Execute(deleteOperation);
-            }
-
-            return question;
         }
     }
 }
