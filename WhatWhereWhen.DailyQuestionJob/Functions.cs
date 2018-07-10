@@ -9,7 +9,7 @@ namespace WhatWhereWhen.DailyQuestionJob
 {
     public class Functions
     {
-        public static async Task PostNewQuestion([TimerTrigger("00:00:30")] TimerInfo timer, TraceWriter log)
+        public static async Task PostNewQuestion([TimerTrigger("0 0 8-17/2 * * *")] TimerInfo timer, TraceWriter log)
         {
             log.Verbose($"Web Job started execution: {DateTime.Now}");
 

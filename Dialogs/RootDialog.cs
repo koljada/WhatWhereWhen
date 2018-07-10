@@ -11,19 +11,20 @@ namespace SimpleEchoBot.Dialogs
     {
         public async Task StartAsync(IDialogContext context)
         {
-            CheckInit(context);
+            await CheckInit(context);
 
             context.Wait(MessageReceivedAsync);
         }
 
-        private void CheckInit(IDialogContext context)
+        private async Task CheckInit(IDialogContext context)
         {
             if (!context.ConversationData.GetValueOrDefault<bool>("init"))
             {
                 context.ConversationData.SetValue("init", true);
-                context.PostAsync("Hi! I'll post some random question every morning. Good luck!");
-                context.PostAsync(Constants.HELP);
-                context.PostAsync("Good luck!");
+                await context.PostAsync("Hi! I'll post some random question every morning.");
+                await context.PostAsync(Constants.HELP);
+                await context.PostAsync("*All questions are taken from *"+ "https://db.chgk.info/");
+                await context.PostAsync("Good luck ;-)");
             }
         }
 

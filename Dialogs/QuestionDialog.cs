@@ -35,7 +35,7 @@ namespace SimpleEchoBot.Dialogs
 
         public async Task StartAsync(IDialogContext context)
         {
-            await PostNewQuestion(context, _withTitle ? "Here is today's question: " : "");
+            await PostNewQuestion(context, _withTitle ? "Here is today's question:" : "");
 
             context.Wait(MessageReceivedAsync);
         }
@@ -57,8 +57,13 @@ namespace SimpleEchoBot.Dialogs
                 q.Answer = Regex.Replace(q.Answer, "\\(pic: (.*)\\)", "");
 
                 reply.Text = "> " + q.Question + NL + NL +
-                                    "Answer: " + NL + q.Answer + NL + NL +
+                                    "**Answer:** " + NL + q.Answer + NL + NL +
                                     "Source: " + NL + q.Sources;
+
+                if (!string.IsNullOrEmpty(q.Authors))
+                {
+                    reply.Text += NL + NL + "Author: " + q.Authors;
+                }
 
                 reply.ReplyToId = q.Id.ToString();
 
@@ -133,7 +138,7 @@ namespace SimpleEchoBot.Dialogs
 
                 newQuestion.Question = Regex.Replace(newQuestion.Question, "\\(pic: (.*)\\)", "");
 
-                message.Text = text + Environment.NewLine + newQuestion.Question;
+                message.Text = text + NL + NL + newQuestion.Question;
 
                 await context.PostAsync(message);
             }
