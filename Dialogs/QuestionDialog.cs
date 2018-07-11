@@ -35,7 +35,7 @@ namespace SimpleEchoBot.Dialogs
 
         public async Task StartAsync(IDialogContext context)
         {
-            await PostNewQuestion(context, _withTitle ? "Here is today's question:" : "");
+            await PostNewQuestion(context, _withTitle ? "## Here is today's question:" : "**Question:**");
 
             context.Wait(MessageReceivedAsync);
         }
@@ -118,6 +118,20 @@ namespace SimpleEchoBot.Dialogs
             return result;
         }
 
+        private IEnumerable<string> GetImageUrl(string text)
+        {
+            string regexpPattern = "\\(pic: (.*)\\)";
+            string baseUrl = "https://db.chgk.info/images/db/";
+
+            var mathces = Regex.Matches(text, regexpPattern);
+
+            foreach (Match match in mathces)
+            {
+                string url = match.Groups[1].Value;
+                yield return baseUrl + url;
+            }
+        }
+
         private async Task PostNewQuestion(IDialogContext context, string text)
         {
             string conversationId = context.MakeMessage().Conversation.Id;
@@ -134,11 +148,34 @@ namespace SimpleEchoBot.Dialogs
 
                 message.Id = newQuestion.Id.ToString();
 
-                message.Attachments = GetAttachments(newQuestion.Question, "Question");
+                //message.Attachments = GetAttachments(newQuestion.Question, "Question");
 
+                //message.Text = text + NL + NL + newQuestion.Question;
+
+                //await context.PostAsync(message);
+
+                var card = new ReceiptCard();
+
+                card.Facts = new List<Fact>
+                {
+                    new Fact("Author", newQuestion.Authors),
+                    new Fact("Rating", newQuestion.Rating),
+                    new Fact("Tour", newQuestion.TournamentTitle),
+                };
+
+                card.Items = new List<ReceiptItem>();
+
+                foreach (string url in GetImageUrl(newQuestion.Question))
+                {
+                    card.Items.Add(new ReceiptItem() { Image = new CardImage() { Url = url } });
+                }
                 newQuestion.Question = Regex.Replace(newQuestion.Question, "\\(pic: (.*)\\)", "");
 
-                message.Text = text + NL + NL + newQuestion.Question;
+                card.Title = newQuestion.Question;
+
+                card.Tap = new CardAction() { DisplayText = newQuestion.Answer };
+
+                message.Attachments = new List<Attachment> { card.ToAttachment() };
 
                 await context.PostAsync(message);
             }
