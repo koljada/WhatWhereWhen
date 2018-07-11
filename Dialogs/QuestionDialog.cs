@@ -2,6 +2,7 @@
 using Microsoft.Bot.Connector;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net.Http;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
@@ -17,7 +18,6 @@ namespace SimpleEchoBot.Dialogs
         private const string KEY = "CURRENT_QUESTION";
         private const string KEY_LEVEL = "CURRENT_LEVEL";
 
-        private readonly bool _withTitle = true;
         private readonly string NL = Environment.NewLine;
 
         [NonSerialized]
@@ -26,16 +26,11 @@ namespace SimpleEchoBot.Dialogs
         public QuestionDialog()
         {
             _questionData = new QuestionDataSql();
-        }
-
-        public QuestionDialog(bool withTitle) : this()
-        {
-            _withTitle = withTitle;
-        }
+        }        
 
         public async Task StartAsync(IDialogContext context)
         {
-            await PostNewQuestion(context, _withTitle ? "## Here is today's question:" : "**Question:**");
+            await PostNewQuestion(context);
 
             context.Wait(MessageReceivedAsync);
         }
@@ -50,33 +45,39 @@ namespace SimpleEchoBot.Dialogs
             {
                 QuestionItem q = context.ConversationData.GetValue<QuestionItem>(KEY);
 
-                IMessageActivity reply = context.MakeMessage();
-
-                reply.Attachments = GetAttachments(q.Answer, "Answer");
-
-                q.Answer = Regex.Replace(q.Answer, "\\(pic: (.*)\\)", "");
-
-                reply.Text = "> " + q.Question + NL + NL +
-                                    "**Answer:** " + NL + q.Answer + NL + NL +
-                                    "Source: " + NL + q.Sources;
-
-                if (!string.IsNullOrEmpty(q.Authors))
-                {
-                    reply.Text += NL + NL + "Author: " + q.Authors;
-                }
+                IMessageActivity reply = context.MakeMessage();         
 
                 reply.ReplyToId = q.Id.ToString();
 
-                await context.PostAsync(reply);
-
-                if (!text.Contains("-off"))
+                CardAction answerAction = new CardAction()
                 {
-                    context.Call(new QuestionDialog(false), Finish);
-                }
+                    Text = q.Answer,
+                    Title = "New Question",
+                    Type = "imBack",
+                    Value = "new"
+                };
+
+                string answerText = "Question:" + "\n\n<br/>" + q.Question + "\n\n<br/><br/><hr/>" +
+                    "Answer:" + "\n\n<br/>" + q.Answer + "\n\n<br/><br/><hr/>" +
+                    "Sourse:" + "\n\n<br/>" + q.Sources;
+
+                HeroCard card = new HeroCard
+                {
+                    Title = "Answer",
+                    Text = answerText,
+                    Images = q.AnswerImageUrls.Select(url => new CardImage(url)).ToList(),
+                    Subtitle = $"Rating: {q.RatingNumber}{NL}{NL}<br/> Level: {q.Complexity}",
+                    Tap = answerAction,
+                    Buttons = new List<CardAction>() { answerAction }
+                };
+
+                reply.Attachments = new List<Attachment> { card.ToAttachment() };
+
+                await context.PostAsync(reply);               
             }
             else if (text.Contains("new"))
             {
-                context.Call(new QuestionDialog(false), Finish);
+                context.Call(new QuestionDialog(), Finish);
             }
             else if (text.Contains("level "))
             {
@@ -99,40 +100,8 @@ namespace SimpleEchoBot.Dialogs
         }
 
         private async Task Finish(IDialogContext context, IAwaitable<object> result) => context.Done(await result);
-
-        private IList<Attachment> GetAttachments(string text, string name)
-        {
-            var result = new List<Attachment>();
-            string regexpPattern = "\\(pic: (.*)\\)";
-            string baseUrl = "https://db.chgk.info/images/db/";
-
-            var mathces = Regex.Matches(text, regexpPattern);
-
-            foreach (Match match in mathces)
-            {
-                string url = match.Groups[1].Value;
-                string ext = url.Split('.')[1];
-                result.Add(new Attachment("image/" + ext, baseUrl + url, null, name));
-            }
-
-            return result;
-        }
-
-        private IEnumerable<string> GetImageUrl(string text)
-        {
-            string regexpPattern = "\\(pic: (.*)\\)";
-            string baseUrl = "https://db.chgk.info/images/db/";
-
-            var mathces = Regex.Matches(text, regexpPattern);
-
-            foreach (Match match in mathces)
-            {
-                string url = match.Groups[1].Value;
-                yield return baseUrl + url;
-            }
-        }
-
-        private async Task PostNewQuestion(IDialogContext context, string text)
+        
+        private async Task PostNewQuestion(IDialogContext context)
         {
             string conversationId = context.MakeMessage().Conversation.Id;
 
@@ -142,38 +111,31 @@ namespace SimpleEchoBot.Dialogs
 
             if (newQuestion != null)
             {
+                newQuestion.InitUrls("https://db.chgk.info/images/db/");
+
                 context.ConversationData.SetValue(KEY, newQuestion);
 
                 IMessageActivity message = context.MakeMessage();
 
                 message.Id = newQuestion.Id.ToString();
 
-                //message.Attachments = GetAttachments(newQuestion.Question, "Question");
-
-                //message.Text = text + NL + NL + newQuestion.Question;
-
-                //await context.PostAsync(message);
-
-                var card = new ReceiptCard();
-
-                card.Facts = new List<Fact>
+                CardAction answerAction = new CardAction()
                 {
-                    new Fact("Author", newQuestion.Authors),
-                    new Fact("Rating", newQuestion.Rating),
-                    new Fact("Tour", newQuestion.TournamentTitle),
+                    Text = newQuestion.Answer,
+                    Title = "Answer",
+                    Type = "imBack",
+                    Value = "answer"
                 };
 
-                card.Items = new List<ReceiptItem>();
-
-                foreach (string url in GetImageUrl(newQuestion.Question))
+                HeroCard card = new HeroCard
                 {
-                    card.Items.Add(new ReceiptItem() { Image = new CardImage() { Url = url } });
-                }
-                newQuestion.Question = Regex.Replace(newQuestion.Question, "\\(pic: (.*)\\)", "");
-
-                card.Title = newQuestion.Question;
-
-                card.Tap = new CardAction() { DisplayText = newQuestion.Answer };
+                    Title = "New question",
+                    Text = newQuestion.Question,
+                    Images = newQuestion.QuestionImageUrls.Select(url => new CardImage(url)).ToList(),
+                    Subtitle = $"Author: {newQuestion.Authors}. {NL}{NL}<br/> Tour: {newQuestion.TournamentTitle}",
+                    Tap = answerAction,
+                    Buttons = new List<CardAction>() { answerAction }
+                };
 
                 message.Attachments = new List<Attachment> { card.ToAttachment() };
 

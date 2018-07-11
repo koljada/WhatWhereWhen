@@ -1,5 +1,7 @@
 ﻿using Newtonsoft.Json;
 using System;
+using System.Collections.Generic;
+using System.Text.RegularExpressions;
 
 namespace WhatWhereWhen.Domain.Models
 {
@@ -77,5 +79,33 @@ namespace WhatWhereWhen.Domain.Models
 
         [JsonProperty("Topic")]
         public string Topic { get; set; }
+       
+        public IEnumerable<string> QuestionImageUrls { get; set; }
+        public IEnumerable<string> AnswerImageUrls { get; set; }
+
+        public void InitUrls(string baseUrl)
+        {
+            Question = GetImageUrl(Question, baseUrl, out IList<string> questionImageUrls);
+            Answer = GetImageUrl(Answer, baseUrl, out IList<string> answerImageUrls);
+
+            QuestionImageUrls = questionImageUrls;
+            AnswerImageUrls = answerImageUrls;
+        }
+
+        private string GetImageUrl(string text, string baseUrl, out IList<string> urls)
+        {
+            urls = new List<string>();
+            string regexpPattern = "\\(pic: (.*)\\)";
+
+            var mathces = Regex.Matches(text, regexpPattern);
+
+            foreach (Match match in mathces)
+            {
+                string url = match.Groups[1].Value;
+                urls.Add(baseUrl + url);
+            }
+
+            return Regex.Replace(text, regexpPattern, "");
+        }
     }
 }
