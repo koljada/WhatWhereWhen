@@ -26,7 +26,7 @@ namespace SimpleEchoBot.Dialogs
         public QuestionDialog()
         {
             _questionData = new QuestionDataSql();
-        }        
+        }
 
         public async Task StartAsync(IDialogContext context)
         {
@@ -45,41 +45,34 @@ namespace SimpleEchoBot.Dialogs
             {
                 QuestionItem q = context.ConversationData.GetValue<QuestionItem>(KEY);
 
-                IMessageActivity reply = context.MakeMessage();         
+                IMessageActivity reply = context.MakeMessage();
 
                 reply.ReplyToId = q.Id.ToString();
 
-                CardAction answerAction = new CardAction()
+                CardAction questionAction = new CardAction()
                 {
-                    Text = q.Answer,
-                    Title = "New Question",
+                    Title = "New question",
                     Type = "imBack",
                     Value = "new"
                 };
 
-                string answerText = "Question:" + "\n\n<br/>" + q.Question + "\n\n<br/><br/><hr/>" +
-                    "Answer:" + "\n\n<br/>" + q.Answer + "\n\n<br/><br/><hr/>" +
-                    "Sourse:" + "\n\n<br/>" + q.Sources;
+                reply.Text = $"**Question:**<br/>{q.Question}<br/>**Answer:**<br/>{q.Answer}<br/><br/>" +
+                    $"**Source:**<br/>{q.Sources}<br/><br/>**Rating:** {q.Rating}<br/><br/>**Level:** {q.Complexity}";
 
-                HeroCard card = new HeroCard
+                reply.Attachments = q.AnswerImageUrls.Select(x => new Attachment() { ContentUrl = x }).ToList();
+
+                reply.SuggestedActions = new SuggestedActions
                 {
-                    Title = "Answer",
-                    Text = answerText,
-                    Images = q.AnswerImageUrls.Select(url => new CardImage(url)).ToList(),
-                    Subtitle = $"Rating: {q.RatingNumber}{NL}{NL}<br/> Level: {q.Complexity}",
-                    Tap = answerAction,
-                    Buttons = new List<CardAction>() { answerAction }
+                    Actions = new List<CardAction> { questionAction }
                 };
 
-                reply.Attachments = new List<Attachment> { card.ToAttachment() };
-
-                await context.PostAsync(reply);               
+                await context.PostAsync(reply);
             }
             else if (text.Contains("new"))
             {
                 context.Call(new QuestionDialog(), Finish);
             }
-            else if (text.Contains("level "))
+            else if (text.Contains("level"))
             {
                 var match = Regex.Match(text, "level(\\s)+([0-5])");
                 if (match.Success)
@@ -89,7 +82,22 @@ namespace SimpleEchoBot.Dialogs
 
                     await context.PostAsync("Level is set up to " + value);
                 }
-                else await context.PostAsync("Level must be within [0-5] range");
+                else
+                {
+                    IMessageActivity reply = context.MakeMessage();
+                    List<CardAction> actions = Enumerable.Range(1, 5).Select(x => new CardAction
+                    {
+                        Title = x.ToString(),
+                        Type = "imBack",
+                        Value = "level " + x
+                    }).ToList();
+
+                    actions.Insert(0, new CardAction("imBack", "Random", value: "level 0"));
+                    reply.Text = "Please select a level";
+                    reply.SuggestedActions = new SuggestedActions(null, actions);
+
+                    await context.PostAsync(reply);
+                };
             }
             else
             {
@@ -100,7 +108,7 @@ namespace SimpleEchoBot.Dialogs
         }
 
         private async Task Finish(IDialogContext context, IAwaitable<object> result) => context.Done(await result);
-        
+
         private async Task PostNewQuestion(IDialogContext context)
         {
             string conversationId = context.MakeMessage().Conversation.Id;
@@ -121,23 +129,21 @@ namespace SimpleEchoBot.Dialogs
 
                 CardAction answerAction = new CardAction()
                 {
-                    Text = newQuestion.Answer,
                     Title = "Answer",
                     Type = "imBack",
                     Value = "answer"
                 };
 
-                HeroCard card = new HeroCard
-                {
-                    Title = "New question",
-                    Text = newQuestion.Question,
-                    Images = newQuestion.QuestionImageUrls.Select(url => new CardImage(url)).ToList(),
-                    Subtitle = $"Author: {newQuestion.Authors}. {NL}{NL}<br/> Tour: {newQuestion.TournamentTitle}",
-                    Tap = answerAction,
-                    Buttons = new List<CardAction>() { answerAction }
-                };
+                message.Text = $"**Question:**<br/>{newQuestion.Question}<br/><br/>" +
+                    $"**Author:** {newQuestion.Authors}<br/><br/>" +
+                    $"**Tour:** {newQuestion.TournamentTitle}";
 
-                message.Attachments = new List<Attachment> { card.ToAttachment() };
+                message.Attachments = newQuestion.QuestionImageUrls.Select(x => new Attachment() { ContentUrl = x }).ToList();
+
+                message.SuggestedActions = new SuggestedActions
+                {
+                    Actions = new List<CardAction> { answerAction }
+                };
 
                 await context.PostAsync(message);
             }
