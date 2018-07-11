@@ -15,7 +15,7 @@ namespace WhatWhereWhen.Domain.Models
         public int ParentId { get; set; }
 
         [JsonProperty("Number")]
-        public byte Number { get; set; }
+        public short Number { get; set; }
 
         [JsonProperty("Type")]
         public string Type { get; set; }
@@ -45,10 +45,10 @@ namespace WhatWhereWhen.Domain.Models
         public string Rating { get; set; }
 
         [JsonProperty("RatingNumber")]
-        public double RatingNumber { get; set; }
+        public double? RatingNumber { get; set; }
 
         [JsonProperty("Complexity")]
-        public byte Complexity { get; set; }
+        public byte? Complexity { get; set; }
 
         [JsonProperty("tourId")]
         public int? TourId { get; set; }

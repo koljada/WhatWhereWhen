@@ -23,7 +23,7 @@ namespace SimpleEchoBot.Dialogs
                 context.ConversationData.SetValue("init", true);
                 await context.PostAsync("Hi! I'll post some random question every morning.");
                 await context.PostAsync(Constants.HELP);
-                await context.PostAsync("*All questions are taken from *"+ "https://db.chgk.info/");
+                await context.PostAsync("*All questions are taken from* "+ "https://db.chgk.info/");
                 await context.PostAsync("Good luck ;-)");
             }
         }

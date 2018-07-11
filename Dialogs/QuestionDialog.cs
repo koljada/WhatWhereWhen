@@ -56,10 +56,27 @@ namespace SimpleEchoBot.Dialogs
                     Value = "new"
                 };
 
-                reply.Text = $"**Question:**<br/>{q.Question}<br/>**Answer:**<br/>{q.Answer}<br/><br/>" +
-                    $"**Source:**<br/>{q.Sources}<br/><br/>**Rating:** {q.Rating}<br/><br/>**Level:** {q.Complexity}";
+                reply.Text = $"**Question:**<br/>{q.Question}<br/>**Answer:**<br/>{q.Answer}";
 
-                reply.Attachments = q.AnswerImageUrls.Select(x => new Attachment() { ContentUrl = x }).ToList();
+                if (!string.IsNullOrWhiteSpace(q.Rating))
+                {
+                    reply.Text += $"<br/><br/>**Rating: **{q.Rating}";
+                }
+                if (q.Complexity.HasValue)
+                {
+                    reply.Text += $"<br/>**Level:** {q.Complexity}";
+                }
+
+                if (string.IsNullOrWhiteSpace(q.Comments))
+                {
+                    reply.Text += $"<br/>**Comments:**<br/>{q.Comments}";
+                }
+                if (!string.IsNullOrWhiteSpace(q.Sources))
+                {
+                    reply.Text += $"<br/>**Source:**<br/>{q.Sources}";
+                }
+
+                reply.Attachments = q.AnswerImageUrls.Select(ToAttachement).ToList();
 
                 reply.SuggestedActions = new SuggestedActions
                 {
@@ -135,11 +152,10 @@ namespace SimpleEchoBot.Dialogs
                 };
 
                 message.Text = $"**Question:**<br/>{newQuestion.Question}<br/><br/>" +
-                    $"**Author:** {newQuestion.Authors}<br/><br/>" +
-                    $"**Tour:** {newQuestion.TournamentTitle}";
+                    $"**Author:** {newQuestion.Authors ?? "Unknkown"}<br/>" +
+                    $"**Tour:** {newQuestion.TournamentTitle ?? "Unknkown"}";
 
-                message.Attachments = newQuestion.QuestionImageUrls.Select(x => new Attachment() { ContentUrl = x }).ToList();
-
+                message.Attachments = newQuestion.QuestionImageUrls.Select(ToAttachement).ToList();
                 message.SuggestedActions = new SuggestedActions
                 {
                     Actions = new List<CardAction> { answerAction }
@@ -147,6 +163,21 @@ namespace SimpleEchoBot.Dialogs
 
                 await context.PostAsync(message);
             }
+            else
+            {
+                await context.SayAsync("I'm sorry there are no more questions for you. Please, try to set another level :-(");
+            }
+        }
+
+        private Attachment ToAttachement(string url)
+        {
+            string ext = url.Split('.').Last();
+            return new Attachment
+            {
+                ContentType = "image/" + ext,
+                ContentUrl = url,
+                Name = "Picture"
+            };
         }
     }
 }

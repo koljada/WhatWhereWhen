@@ -17,7 +17,7 @@ namespace WhatWhereWhen.Data.Sql
             _connectionString = ConfigurationManager.ConnectionStrings["DefaultSql"].ConnectionString;
         }
 
-        public async Task<QuestionItem> GetRandomQuestion(string conversationId, QuestionComplexity? complexity = QuestionComplexity.Middle, bool markAsRead = true)
+        public async Task<QuestionItem> GetRandomQuestion(string conversationId, QuestionComplexity? complexity = null, bool markAsRead = true)
         {
             using (SqlConnection connection = new SqlConnection(_connectionString))
             {
