@@ -8,6 +8,7 @@ using System.Net.Http;
 using System.Net;
 using System;
 using SimpleEchoBot.Dialogs;
+using System.Diagnostics;
 
 namespace Microsoft.Bot.Sample.SimpleEchoBot
 {
@@ -39,12 +40,16 @@ namespace Microsoft.Bot.Sample.SimpleEchoBot
         {
             try
             {
+                Trace.TraceInformation($"PUT request. Starting resuming conversations");
+
                 await ConversationStarter.Resume();
 
                 return Ok();
             }
             catch (Exception ex)
             {
+                Trace.TraceError("PUT: Exception when resuming", ex);
+
                 return BadRequest(ex.ToString());
             }
         }

@@ -2,6 +2,7 @@
 using Microsoft.Bot.Connector;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Net.Http;
 using System.Text.RegularExpressions;
@@ -30,6 +31,8 @@ namespace SimpleEchoBot.Dialogs
 
         public async Task StartAsync(IDialogContext context)
         {
+            Trace.TraceInformation($"QuestionDialog.StartAsync");
+
             await PostNewQuestion(context);
 
             context.Wait(MessageReceivedAsync);
@@ -39,10 +42,16 @@ namespace SimpleEchoBot.Dialogs
         {
             IMessageActivity message = await argument;
 
+            Trace.TraceInformation($"QuestionDialog.MessageReceivedAsync: text: {message.Text}; " +
+                $"conversation: {message.Conversation.Id}, {message.Conversation.Name}, {message.Conversation.IsGroup}; " +
+                $"from: {message.From.Id}, {message.From.Name}; type: {message.Type}; channel: {message.ChannelId}");
+
             string text = message.Text.Trim().ToLower();
 
-            if (text.Contains("answer"))
+            if (text.EndsWith("answer"))
             {
+                Trace.TraceInformation("QuestionDialog.MessageReceivedAsync: answer case.");
+
                 QuestionItem q = context.ConversationData.GetValue<QuestionItem>(KEY);
 
                 IMessageActivity reply = context.MakeMessage();
@@ -85,12 +94,15 @@ namespace SimpleEchoBot.Dialogs
 
                 await context.PostAsync(reply);
             }
-            else if (text.Contains("new"))
+            else if (text.EndsWith("new"))
             {
+                Trace.TraceInformation("QuestionDialog.MessageReceivedAsync: new case.");
                 context.Call(new QuestionDialog(), Finish);
             }
             else if (text.Contains("level"))
             {
+                Trace.TraceInformation("QuestionDialog.MessageReceivedAsync: level case.");
+
                 var match = Regex.Match(text, "level(\\s)+([0-5])");
                 if (match.Success)
                 {
@@ -118,54 +130,73 @@ namespace SimpleEchoBot.Dialogs
             }
             else
             {
+                Trace.TraceInformation("QuestionDialog.MessageReceivedAsync: other case.");
+
                 await context.PostAsync("Sorry, I did not get it." + NL + NL + Constants.HELP);
 
                 context.Wait(MessageReceivedAsync);
             }
         }
 
-        private async Task Finish(IDialogContext context, IAwaitable<object> result) => context.Done(await result);
+        private async Task Finish(IDialogContext context, IAwaitable<object> result)
+        {
+            Trace.TraceInformation("QuestionDialog.Finish");
+
+            context.Done(await result);
+        }
 
         private async Task PostNewQuestion(IDialogContext context)
         {
-            string conversationId = context.MakeMessage().Conversation.Id;
-
-            byte level = context.ConversationData.GetValueOrDefault<byte>(KEY_LEVEL);
-
-            QuestionItem newQuestion = await _questionData.GetRandomQuestion(conversationId, (QuestionComplexity)level);
-
-            if (newQuestion != null)
+            try
             {
-                newQuestion.InitUrls("https://db.chgk.info/images/db/");
+                string conversationId = context.MakeMessage().Conversation.Id;
 
-                context.ConversationData.SetValue(KEY, newQuestion);
+                byte level = context.ConversationData.GetValueOrDefault<byte>(KEY_LEVEL);
 
-                IMessageActivity message = context.MakeMessage();
+                Trace.TraceInformation($"PostNewQuestion: conversation: {conversationId}; level: {level}");
 
-                message.Id = newQuestion.Id.ToString();
+                QuestionItem newQuestion = await _questionData.GetRandomQuestion(conversationId, (QuestionComplexity)level);
 
-                CardAction answerAction = new CardAction()
+                Trace.TraceInformation($"PostNewQuestion: {newQuestion.Id}, {newQuestion.Question}, {newQuestion.Answer}");
+
+                if (newQuestion != null)
                 {
-                    Title = "Answer",
-                    Type = "imBack",
-                    Value = "answer"
-                };
+                    newQuestion.InitUrls("https://db.chgk.info/images/db/");
 
-                message.Text = $"**Question:**<br/>{newQuestion.Question}<br/><br/>" +
-                    $"**Author:** {newQuestion.Authors ?? "Unknkown"}<br/>" +
-                    $"**Tour:** {newQuestion.TournamentTitle ?? "Unknkown"}";
+                    context.ConversationData.SetValue(KEY, newQuestion);
 
-                message.Attachments = newQuestion.QuestionImageUrls.Select(ToAttachement).ToList();
-                message.SuggestedActions = new SuggestedActions
+                    IMessageActivity message = context.MakeMessage();
+
+                    message.Id = newQuestion.Id.ToString();
+
+                    CardAction answerAction = new CardAction()
+                    {
+                        Title = "Answer",
+                        Type = "imBack",
+                        Value = "answer"
+                    };
+
+                    message.Text = $"**Question:**<br/>{newQuestion.Question}<br/><br/>" +
+                        $"**Author:** {newQuestion.Authors ?? "Unknkown"}<br/>" +
+                        $"**Tour:** {newQuestion.TournamentTitle ?? "Unknkown"}";
+
+                    message.Attachments = newQuestion.QuestionImageUrls.Select(ToAttachement).ToList();
+                    message.SuggestedActions = new SuggestedActions
+                    {
+                        Actions = new List<CardAction> { answerAction }
+                    };
+
+                    await context.PostAsync(message);
+                }
+                else
                 {
-                    Actions = new List<CardAction> { answerAction }
-                };
-
-                await context.PostAsync(message);
+                    await context.SayAsync("I'm sorry there are no more questions for you. Please, try to set another level :-(");
+                }
             }
-            else
+            catch (Exception ex)
             {
-                await context.SayAsync("I'm sorry there are no more questions for you. Please, try to set another level :-(");
+                Trace.TraceError("Exception in PostNewQuestion", ex);
+                await context.SayAsync("I'm sorry - something wrong has happened.");
             }
         }
 

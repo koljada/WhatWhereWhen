@@ -8,6 +8,12 @@ namespace WhatWhereWhen.Domain.Models
     [Serializable]
     public class QuestionItem
     {
+        public QuestionItem()
+        {
+            QuestionImageUrls = new List<string>();
+            AnswerImageUrls = new List<string>();
+        }
+
         [JsonProperty("QuestionId")]
         public int Id { get; set; }
 

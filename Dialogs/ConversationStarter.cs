@@ -12,6 +12,7 @@ using Microsoft.WindowsAzure.Storage;
 using System.Configuration;
 using System.Collections.Generic;
 using System.Linq;
+using System.Diagnostics;
 
 namespace SimpleEchoBot.Dialogs
 {
@@ -30,12 +31,22 @@ namespace SimpleEchoBot.Dialogs
 
         public static void SaveConversation(IMessageActivity message)
         {
-            CloudTable table = GetTable();
+            Trace.TraceInformation($"SaveConversation { message.Conversation.Id}, { message.Conversation.Name}, { message.Conversation.IsGroup}; " +
+                $"from: {message.From.Id}, {message.From.Name}; type: {message.Type}; channel: {message.ChannelId}");
 
-            ConversationHistory conversation = new ConversationHistory(message);
+            try
+            {
+                CloudTable table = GetTable();
 
-            TableOperation insertOperation = TableOperation.InsertOrReplace(conversation);
-            table.Execute(insertOperation);
+                ConversationHistory conversation = new ConversationHistory(message);
+
+                TableOperation insertOperation = TableOperation.InsertOrReplace(conversation);
+                table.Execute(insertOperation);
+            }
+            catch (Exception ex)
+            {
+                Trace.TraceError("Exception when saving conversation", ex);
+            }
         }
 
         private static IList<ConversationHistory> GetConversations()
@@ -50,13 +61,18 @@ namespace SimpleEchoBot.Dialogs
             }
             catch (Exception ex)
             {
+                Trace.TraceError("Exception when fetching conversations", ex);
                 return new List<ConversationHistory>();
             }
         }
 
         public static async Task Resume()
         {
-            foreach (ConversationHistory history in GetConversations())
+            var conversations = GetConversations();
+
+            Trace.TraceInformation($"Resuming  {conversations.Count} conversations");
+
+            foreach (ConversationHistory history in conversations)
             {
                 await Resume(history);
             }
@@ -64,9 +80,11 @@ namespace SimpleEchoBot.Dialogs
 
         public static async Task Resume(ConversationHistory history)
         {
+            Activity message = null;
+            Trace.TraceInformation($"Resuming  {history.PartitionKey} {history.PartitionKey}");
             try
             {
-                Activity message = JsonConvert.DeserializeObject<ConversationReference>(history.Conversation).GetPostToBotMessage();
+                message = JsonConvert.DeserializeObject<ConversationReference>(history.Conversation).GetPostToBotMessage();
                 ConnectorClient client = new ConnectorClient(new Uri(message.ServiceUrl));
 
                 using (ILifetimeScope scope = DialogModule.BeginLifetimeScope(Conversation.Container, message))
@@ -86,7 +104,9 @@ namespace SimpleEchoBot.Dialogs
                 }
             }
             catch (Exception ex)
-            { }
+            {
+                Trace.TraceError($"Exception when resuming conversation {message.Conversation?.Id}", ex);
+            }
         }
     }
 
