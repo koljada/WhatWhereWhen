@@ -76,7 +76,7 @@ namespace SimpleEchoBot.Dialogs
                     reply.Text += $"<br/>**Level:** {q.Complexity}";
                 }
 
-                if (string.IsNullOrWhiteSpace(q.Comments))
+                if (!string.IsNullOrWhiteSpace(q.Comments))
                 {
                     reply.Text += $"<br/>**Comments:**<br/>{q.Comments}";
                 }
