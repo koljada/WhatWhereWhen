@@ -10,6 +10,8 @@ using System;
 using SimpleEchoBot.Dialogs;
 using System.Diagnostics;
 
+using Activity = Microsoft.Bot.Connector.Activity;
+
 namespace Microsoft.Bot.Sample.SimpleEchoBot
 {
     public class MessagesController : ApiController

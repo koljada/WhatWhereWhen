@@ -28,14 +28,14 @@ namespace WhatWhereWhen.Data.Sql
             {
                 string sql = @"SELECT TOP 1 Q.* FROM [cgk].[Question] Q 
                                 LEFT JOIN [cgk].[QuestionConversation] QC ON Q.Id = QC.QuestionId AND QC.ConversationId = @conversationId
-                                WHERE QC.ConversationId IS NULL";
+                                WHERE QC.ConversationId IS NULL AND (ABS(CAST((BINARY_CHECKSUM(Id) * RAND()) as int)) % 100) < 10";
 
                 if (complexity > 0)
                 {
                     sql += $" AND Q.Complexity = " + (byte)complexity;
                 }
 
-                var result = await connection.QueryFirstOrDefaultAsync<QuestionItem>(sql + " ORDER BY newid()", new { conversationId });
+                var result = await connection.QueryFirstOrDefaultAsync<QuestionItem>(sql, new { conversationId });
 
                 if (result != null && markAsRead)
                 {
