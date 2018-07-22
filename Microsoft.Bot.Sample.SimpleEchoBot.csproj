@@ -261,9 +261,7 @@
     <Compile Include="App_Start\WebApiConfig.cs" />
     <Compile Include="Controllers\HomeController.cs" />
     <Compile Include="Controllers\MessagesController.cs" />
-    <Compile Include="Dialogs\Constants.cs" />
     <Compile Include="Dialogs\ConversationStarter.cs" />
-    <Compile Include="Dialogs\QuestionDialog.cs" />
     <Compile Include="Dialogs\RootDialog.cs" />
     <Compile Include="ErrorHandler\AiHandleErrorAttribute.cs" />
     <Compile Include="Global.asax.cs">

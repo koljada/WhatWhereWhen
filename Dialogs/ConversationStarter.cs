@@ -92,14 +92,17 @@ namespace SimpleEchoBot.Dialogs
                 using (ILifetimeScope scope = DialogModule.BeginLifetimeScope(Conversation.Container, message))
                 {
                     IBotData botData = scope.Resolve<IBotData>();
+
                     await botData.LoadAsync(CancellationToken.None);
 
-                    IDialogTask task = scope.Resolve<IDialogTask>();
+                    IMessageActivity temp = message.CreateReply().AsMessageActivity();
 
-                    QuestionDialog dialog = new QuestionDialog();
-                    task.Call(dialog.Void<object, IMessageActivity>(), null);
+                    IMessageActivity reply = await RootDialog.PostNewQuestion(botData.ConversationData, temp);
 
-                    await task.PollAsync(CancellationToken.None);
+                    if (reply != null)
+                    {
+                        await client.Conversations.SendToConversationAsync((Activity)reply);
+                    }
 
                     //flush dialog stack
                     await botData.FlushAsync(CancellationToken.None);

@@ -4,8 +4,6 @@ using System.Web.Http;
 using Microsoft.Bot.Connector;
 using Microsoft.Bot.Builder.Dialogs;
 using System.Web.Http.Description;
-using System.Net.Http;
-using System.Net;
 using System;
 using SimpleEchoBot.Dialogs;
 using System.Diagnostics;
@@ -23,7 +21,7 @@ namespace Microsoft.Bot.Sample.SimpleEchoBot
         /// <param name="activity"></param>
         [BotAuthentication]
         [ResponseType(typeof(void))]
-        public virtual async Task<HttpResponseMessage> Post([FromBody] Activity activity)
+        public async Task<IHttpActionResult> Post([FromBody] Activity activity)
         {
             // check if activity is of type message
             if (activity != null && activity.GetActivityType() == ActivityTypes.Message)
@@ -34,7 +32,7 @@ namespace Microsoft.Bot.Sample.SimpleEchoBot
             {
                 HandleSystemMessage(activity);
             }
-            return new HttpResponseMessage(HttpStatusCode.Accepted);
+            return Ok();
         }
 
         [AllowAnonymous]
@@ -65,6 +63,7 @@ namespace Microsoft.Bot.Sample.SimpleEchoBot
             }
             else if (message.Type == ActivityTypes.ConversationUpdate)
             {
+                Trace.TraceInformation("Conversation update");
                 // Handle conversation state changes, like members being added and removed
                 // Use Activity.MembersAdded and Activity.MembersRemoved and Activity.Action for info
                 // Not available in all channels
