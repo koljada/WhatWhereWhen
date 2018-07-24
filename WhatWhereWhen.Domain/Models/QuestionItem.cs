@@ -6,7 +6,7 @@ using System.Text.RegularExpressions;
 namespace WhatWhereWhen.Domain.Models
 {
     [Serializable]
-    public class QuestionItem
+    public class QuestionItem : BaseEntity
     {
         public QuestionItem()
         {
@@ -15,7 +15,7 @@ namespace WhatWhereWhen.Domain.Models
         }
 
         [JsonProperty("QuestionId")]
-        public int Id { get; set; }
+        public override int Id { get; set; }
 
         [JsonProperty("ParentId")]
         public int ParentId { get; set; }
@@ -57,35 +57,37 @@ namespace WhatWhereWhen.Domain.Models
         public byte? Complexity { get; set; }
 
         [JsonProperty("tourId")]
-        public int? TourId { get; set; }
+        public int? TourId { get; set; }//FK to Tour
 
         [JsonProperty("tournamentId")]
-        public int? TournamentId { get; set; }
+        public int? TournamentId { get; set; }//FK to Tournament
 
         [JsonProperty("tourTitle")]
-        public string TourTitle { get; set; }
+        public string TourTitle { get; set; }//TODO: From Tour
 
         [JsonProperty("tournamentTitle")]
-        public string TournamentTitle { get; set; }
+        public string TournamentTitle { get; set; }//TODO: From Tournament
 
         [JsonProperty("tourType")]
-        public string TourType { get; set; }
+        public string TourType { get; set; }//TODO: From Tour
 
         [JsonProperty("tournamentType")]
         public string TournamentType { get; set; }
 
         [JsonProperty("tourPlayedAt")]
-        public DateTime? TourPlayedAt { get; set; }
+        public DateTime? TourPlayedAt { get; set; }//TODO: From Tour
 
         [JsonProperty("tournamentPlayedAt")]
-        public DateTime? TournamentPlayedAt { get; set; }
+        public DateTime? TournamentPlayedAt { get; set; }//TODO: From Tournament
 
         [JsonProperty("Notices")]
         public string Notices { get; set; }
 
         [JsonProperty("Topic")]
         public string Topic { get; set; }
-       
+
+        public DateTime? ImportedAt { get; set; }
+
         public IEnumerable<string> QuestionImageUrls { get; set; }
         public IEnumerable<string> AnswerImageUrls { get; set; }
 

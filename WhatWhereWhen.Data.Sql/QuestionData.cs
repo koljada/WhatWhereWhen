@@ -1,10 +1,13 @@
-﻿using System.Configuration;
+﻿using Dapper;
+using DapperExtensions;
+using System;
+using System.Configuration;
 using System.Data;
 using System.Data.SqlClient;
+using System.Threading.Tasks;
+using WhatWhereWhen.Data.Sql.Mappings;
 using WhatWhereWhen.Domain.Interfaces;
 using WhatWhereWhen.Domain.Models;
-using Dapper;
-using System.Threading.Tasks;
 
 namespace WhatWhereWhen.Data.Sql
 {
@@ -88,6 +91,49 @@ namespace WhatWhereWhen.Data.Sql
                 connection.Close();
                 return result;
             }
+        }
+
+        public int InsertTournament(Tournament tournament)
+        {
+            DapperExtensions.DapperExtensions.SetMappingAssemblies(new[] { typeof(TournamentMapper).Assembly });
+
+            var t2 = DapperExtensions.DapperExtensions.GetMap<Tournament>();
+
+            using (SqlConnection connection = new SqlConnection(_connectionString))
+            {
+                try
+                {
+                    if (!Exist(connection, tournament))
+                    {
+                        tournament.ImportedAt = DateTime.UtcNow;
+                        connection.Insert(tournament);
+                    }
+
+                    foreach (var question in tournament.Questions)
+                    {
+                        if (!Exist(connection, question))
+                        {
+                            question.TournamentId = tournament.Id;
+                            question.TournamentTitle = tournament.Title;
+                            question.ImportedAt = DateTime.UtcNow;
+
+                            connection.Insert(question);
+                        }
+                    }
+
+                }
+                catch (Exception ex)
+                {
+                    var t = 1;
+                }
+            }
+
+            return tournament.Questions.Count;
+        }
+
+        private bool Exist<T>(SqlConnection connection, T model) where T : BaseEntity
+        {
+            return connection.Get<T>(model.Id) != null;
         }
     }
 }

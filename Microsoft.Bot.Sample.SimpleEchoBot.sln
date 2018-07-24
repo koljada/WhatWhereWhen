@@ -14,6 +14,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WhatWhereWhen.Data.Sql", "W
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "WhatWhereWhen.DailyQuestion.Parser", "WhatWhereWhen.DailyQuestion.Parser\WhatWhereWhen.DailyQuestion.Parser.csproj", "{1417F007-DC9B-4438-A389-378905A79E86}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WhatWhereWhen.Parser", "WhatWhereWhen.Parser\WhatWhereWhen.Parser\WhatWhereWhen.Parser.csproj", "{90AA6DEF-AD16-4BD4-A352-7083489D7BCD}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -44,6 +46,10 @@ Global
 		{1417F007-DC9B-4438-A389-378905A79E86}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{1417F007-DC9B-4438-A389-378905A79E86}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{1417F007-DC9B-4438-A389-378905A79E86}.Release|Any CPU.Build.0 = Release|Any CPU
+		{90AA6DEF-AD16-4BD4-A352-7083489D7BCD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{90AA6DEF-AD16-4BD4-A352-7083489D7BCD}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{90AA6DEF-AD16-4BD4-A352-7083489D7BCD}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{90AA6DEF-AD16-4BD4-A352-7083489D7BCD}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

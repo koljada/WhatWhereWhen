@@ -8,5 +8,7 @@ namespace WhatWhereWhen.Domain.Interfaces
         int InsertOrUpdateQuestion(QuestionItem question);
 
         Task<QuestionItem> GetRandomQuestion(string conversationId, QuestionComplexity? complexity = QuestionComplexity.Middle, bool markAsRead = true);
+
+        int InsertTournament(Tournament tournament);
     }
 }
