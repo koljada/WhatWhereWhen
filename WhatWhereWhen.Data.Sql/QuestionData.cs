@@ -4,6 +4,7 @@ using System;
 using System.Configuration;
 using System.Data;
 using System.Data.SqlClient;
+using System.Diagnostics;
 using System.Threading.Tasks;
 using WhatWhereWhen.Data.Sql.Mappings;
 using WhatWhereWhen.Domain.Interfaces;
@@ -15,8 +16,12 @@ namespace WhatWhereWhen.Data.Sql
     {
         private readonly string _connectionString;
 
-        public QuestionDataSql()
+        public QuestionDataSql(bool withMapping = false)
         {
+            if (withMapping)
+            {
+                DapperExtensions.DapperExtensions.SetMappingAssemblies(new[] { typeof(TournamentMapper).Assembly });
+            }
             _connectionString = ConfigurationManager.ConnectionStrings["DefaultSql"].ConnectionString;
         }
 
@@ -93,40 +98,102 @@ namespace WhatWhereWhen.Data.Sql
             }
         }
 
+        public int InsertTour(Tour tour)
+        {
+            string state = "";
+            using (SqlConnection connection = new SqlConnection(_connectionString))
+            {
+                try
+                {
+                    Trace.TraceInformation($"Checking tour #{tour.Id} ({tour.ChildrenNum})");
+                    if (!Exist(connection, tour))
+                    {
+                        tour.ImportedAt = DateTime.UtcNow;
+                        connection.Insert(tour);
+                        state = "Inserted";
+                    }
+                    else
+                    {
+                        Trace.TraceInformation($"Tour #{tour.Id} already exists");
+                        state = "Skipped";
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Trace.TraceError($"Exception when inserting tour #{tour.Id}", ex);
+                    state = "Error";
+                }
+            }
+
+            Trace.TraceInformation($"Tour #{tour.Id} has been handled. State: {state}.");
+
+            return 1;
+        }
+
         public int InsertTournament(Tournament tournament)
         {
-            DapperExtensions.DapperExtensions.SetMappingAssemblies(new[] { typeof(TournamentMapper).Assembly });
-
-            var t2 = DapperExtensions.DapperExtensions.GetMap<Tournament>();
+            string state = "";
+            short inserted = 0;
+            short skipped = 0;
+            short error = 0;
 
             using (SqlConnection connection = new SqlConnection(_connectionString))
             {
                 try
                 {
+                    Trace.TraceInformation($"Checking tounament #{tournament.Id} ({tournament.QuestionsNum})");
                     if (!Exist(connection, tournament))
                     {
+                        Trace.TraceInformation($"Inserting tounament #{tournament.Id}");
                         tournament.ImportedAt = DateTime.UtcNow;
                         connection.Insert(tournament);
+                        state = "Inserted";
+                    }
+                    else
+                    {
+                        Trace.TraceInformation($"Tounament #{tournament.Id} already exists");
+                        state = "Skipped";
                     }
 
                     foreach (var question in tournament.Questions)
                     {
-                        if (!Exist(connection, question))
+                        try
                         {
-                            question.TournamentId = tournament.Id;
-                            question.TournamentTitle = tournament.Title;
-                            question.ImportedAt = DateTime.UtcNow;
+                            //Trace.TraceInformation($"Checking question #{question.Id}");
+                            if (!Exist(connection, question))
+                            {
+                                //Trace.TraceInformation($"Inserting question #{question.Id}");
 
-                            connection.Insert(question);
+                                question.TournamentId = tournament.Id;
+                                question.TournamentTitle = tournament.Title;
+                                question.ImportedAt = DateTime.UtcNow;
+
+                                connection.Insert(question);
+                                inserted++;
+                            }
+                            else
+                            {
+                                //Trace.TraceInformation($"Question #{question.Id} already exists");
+                                skipped++;
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            Trace.TraceError($"Exception when inserting question #{question.Id}", ex);
+                            error++;
                         }
                     }
 
                 }
                 catch (Exception ex)
                 {
-                    var t = 1;
+                    Trace.TraceError($"Exception when inserting tournament #{tournament.Id}", ex);
+                    state = "Error";
                 }
             }
+
+            Trace.TraceInformation($"Tournament #{tournament.Id} has been handled. State: {state}." +
+                $" {inserted} questions have need inserted; {skipped} questions have been skipped; {error} have been missed(there was an exception).");
 
             return tournament.Questions.Count;
         }

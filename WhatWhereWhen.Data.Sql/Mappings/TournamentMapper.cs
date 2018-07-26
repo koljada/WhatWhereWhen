@@ -1,5 +1,4 @@
-﻿using DapperExtensions.Mapper;
-using WhatWhereWhen.Domain.Models;
+﻿using WhatWhereWhen.Domain.Models;
 
 namespace WhatWhereWhen.Data.Sql.Mappings
 {
@@ -7,6 +6,8 @@ namespace WhatWhereWhen.Data.Sql.Mappings
     {
         public TournamentMapper()
         {
+            TableName = "Tour";
+
             Map(x => x.Questions).Ignore();
 
             AutoMap();

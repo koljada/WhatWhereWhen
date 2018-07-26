@@ -86,8 +86,6 @@ namespace WhatWhereWhen.Domain.Models
         [JsonProperty("Topic")]
         public string Topic { get; set; }
 
-        public DateTime? ImportedAt { get; set; }
-
         public IEnumerable<string> QuestionImageUrls { get; set; }
         public IEnumerable<string> AnswerImageUrls { get; set; }
 

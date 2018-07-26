@@ -50,6 +50,7 @@
   <ItemGroup>
     <Compile Include="Mappings\BaseMapper.cs" />
     <Compile Include="Mappings\QuestionMapper.cs" />
+    <Compile Include="Mappings\TourMapper.cs" />
     <Compile Include="Mappings\TournamentMapper.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="QuestionData.cs" />
