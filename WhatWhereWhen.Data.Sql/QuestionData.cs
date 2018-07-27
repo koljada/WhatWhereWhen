@@ -148,6 +148,35 @@ namespace WhatWhereWhen.Data.Sql
                         tournament.ImportedAt = DateTime.UtcNow;
                         connection.Insert(tournament);
                         state = "Inserted";
+
+                        foreach (var question in tournament.Questions)
+                        {
+                            try
+                            {
+                                //Trace.TraceInformation($"Checking question #{question.Id}");
+                                if (!Exist(connection, question))
+                                {
+                                    //Trace.TraceInformation($"Inserting question #{question.Id}");
+
+                                    question.TournamentId = tournament.Id;
+                                    question.TournamentTitle = tournament.Title;
+                                    question.ImportedAt = DateTime.UtcNow;
+
+                                    connection.Insert(question);
+                                    inserted++;
+                                }
+                                else
+                                {
+                                    //Trace.TraceInformation($"Question #{question.Id} already exists");
+                                    skipped++;
+                                }
+                            }
+                            catch (Exception ex)
+                            {
+                                Trace.TraceError($"Exception when inserting question #{question.Id}", ex);
+                                error++;
+                            }
+                        }
                     }
                     else
                     {
@@ -155,34 +184,6 @@ namespace WhatWhereWhen.Data.Sql
                         state = "Skipped";
                     }
 
-                    foreach (var question in tournament.Questions)
-                    {
-                        try
-                        {
-                            //Trace.TraceInformation($"Checking question #{question.Id}");
-                            if (!Exist(connection, question))
-                            {
-                                //Trace.TraceInformation($"Inserting question #{question.Id}");
-
-                                question.TournamentId = tournament.Id;
-                                question.TournamentTitle = tournament.Title;
-                                question.ImportedAt = DateTime.UtcNow;
-
-                                connection.Insert(question);
-                                inserted++;
-                            }
-                            else
-                            {
-                                //Trace.TraceInformation($"Question #{question.Id} already exists");
-                                skipped++;
-                            }
-                        }
-                        catch (Exception ex)
-                        {
-                            Trace.TraceError($"Exception when inserting question #{question.Id}", ex);
-                            error++;
-                        }
-                    }
 
                 }
                 catch (Exception ex)

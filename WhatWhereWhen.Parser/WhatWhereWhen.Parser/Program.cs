@@ -16,27 +16,50 @@ namespace WhatWhereWhen.Parser
 {
     class Program
     {
-        static void Main(string[] args)
+        static async Task Main(string[] args)
         {
-            string[] links = GetUrls();
+            var errors = new List<string>();
+            var queue = new Queue<string>(GetUrls());
 
             IQuestionData questionData = new QuestionDataSql(true);
 
             using (HttpClient client = new HttpClient())
             {
-                for (int i = 0; i < links.Length; i++)
+                while (queue.Count > 0)
                 {
-                    string link = links[i];
+                    string link = queue.Dequeue();
                     Trace.WriteLine("");
-                    Trace.TraceInformation($"{i+1}. Start processing {link}");
+                    Trace.TraceInformation($"Start processing {link}");
                     Trace.WriteLine("");
-                    SendRequest(client, link, questionData).Wait();
+                    var newQ = await SendRequest(client, link, questionData);
+
+                    foreach (var item in newQ)
+                    {
+                        if (!newQ.Contains(item))
+                        {
+                            queue.Enqueue(item);
+                        }
+                    }
+
                     Trace.WriteLine("");
-                    Trace.TraceInformation($"{i + 1}. End processing {link}");
+                    Trace.TraceInformation($"End processing {link}");
                     Trace.WriteLine("");
                     Trace.WriteLine("******************************");
                     Trace.WriteLine("");
                 }
+                //for (int i = 0; i < links.Count; i++)
+                //{
+                //    string link = links[i];
+                //    Trace.WriteLine("");
+                //    Trace.TraceInformation($"{i + 1}. Start processing {link}");
+                //    Trace.WriteLine("");
+                //    SendRequest(client, link, questionData).Wait();
+                //    Trace.WriteLine("");
+                //    Trace.TraceInformation($"{i + 1}. End processing {link}");
+                //    Trace.WriteLine("");
+                //    Trace.WriteLine("******************************");
+                //    Trace.WriteLine("");
+                //}
             }
 
             Console.ReadLine();
@@ -48,11 +71,11 @@ namespace WhatWhereWhen.Parser
         }
 
 
-        private static async Task SendRequest(HttpClient client, string url, IQuestionData questionData)
+        private static async Task<string[]> SendRequest(HttpClient client, string url, IQuestionData questionData)
         {
             string xml = "";
             string json = null;
-            JToken token = null;
+            JObject token = null;
 
             try
             {
@@ -61,7 +84,7 @@ namespace WhatWhereWhen.Parser
             catch (Exception ex)
             {
                 Trace.TraceError("Exception when get request", ex);
-                return;
+                return new string[] { };
             }
 
             XmlDocument doc = new XmlDocument();
@@ -72,7 +95,7 @@ namespace WhatWhereWhen.Parser
             catch (Exception ex)
             {
                 Trace.TraceError("Exception when loading text to XmlDocument", ex);
-                return;
+                return new string[] { };
             }
 
             try
@@ -82,37 +105,45 @@ namespace WhatWhereWhen.Parser
             catch (Exception ex)
             {
                 Trace.TraceError("Exception when Serializing to XmlNode", ex);
-                return;
+                return new string[] { };
             }
 
             try
             {
-                token = JToken.Parse(json);
+                token = JObject.Parse(json);
             }
             catch (Exception ex)
             {
                 Trace.TraceError("Exception when parsing JToken", ex);
-                return;
+                return new string[] { };
             }
 
             try
             {
-                short chidrens = token.Value<short>("ChildrenNum");
-                if (chidrens == 1)
+                var tours = token["tour"];
+                var question = token["question"];
+                if (tours != null)
+                {
+                    var tour = token.ToObject<Tour>();
+                    questionData.InsertTour(tour);
+                    var childs = (tours as JArray).Select(x => $"/tour/{x["TextId"]}").ToArray();
+                    return childs;
+                }
+                else if (question != null)
                 {
                     var tournament = token.ToObject<Tournament>();
                     questionData.InsertTournament(tournament);
                 }
                 else
                 {
-                    var tour = token.ToObject<Tour>();
-                    questionData.InsertTour(tour);
+                    var tt = 3;
                 }
+                return new string[] { };
             }
             catch (Exception ex)
             {
                 Trace.TraceError("Exception when inserting to DB", ex);
-                return;
+                return new string[] { };
             }
         }
     }
