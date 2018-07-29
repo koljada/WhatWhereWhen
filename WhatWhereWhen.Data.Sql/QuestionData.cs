@@ -1,10 +1,12 @@
 ﻿using Dapper;
 using DapperExtensions;
 using System;
+using System.Collections.Generic;
 using System.Configuration;
 using System.Data;
 using System.Data.SqlClient;
 using System.Diagnostics;
+using System.Linq;
 using System.Threading.Tasks;
 using WhatWhereWhen.Data.Sql.Mappings;
 using WhatWhereWhen.Domain.Interfaces;
@@ -36,7 +38,7 @@ namespace WhatWhereWhen.Data.Sql
             {
                 string sql = @"SELECT TOP 1 Q.* FROM [cgk].[Question] Q 
                                 LEFT JOIN [cgk].[QuestionConversation] QC ON Q.Id = QC.QuestionId AND QC.ConversationId = @conversationId
-                                WHERE QC.ConversationId IS NULL AND (ABS(CAST((BINARY_CHECKSUM(Id) * RAND()) as int)) % 100) < 10";
+                                WHERE QC.ConversationId IS NULL AND (ABS(CAST((BINARY_CHECKSUM(Id) * RAND()) as int)) % 100) < 10 AND Q.TypeNum = 1";
 
                 if (complexity > 0)
                 {
@@ -52,6 +54,58 @@ namespace WhatWhereWhen.Data.Sql
                 }
 
                 return result;
+            }
+        }
+
+        public async Task<TourBase> GetTourById(int tourId)
+        {
+            string sql = "SELECT TOP (1) Id, Title, Type, ChildrenNum, QuestionsNum  FROM [cgk].[Tour] WHERE Id = @tourId";
+            string sql2 = "SELECT Id, Title, Type, ChildrenNum, QuestionsNum FROM [cgk].[Tour] WHERE ParentId = @tourId";
+            string sql3 = "SELECT * FROM [cgk].[Question] WHERE TournamentId = @tourId";
+
+            using (SqlConnection connection = new SqlConnection(_connectionString))
+            {
+                var tour = await connection.QueryFirstOrDefaultAsync<TourBase>(sql, new { tourId });
+
+                if (tour.Type != "Т")
+                {
+
+                    var childrenTours = await connection.QueryAsync<Tour>(sql2, new { tourId });
+                    if (childrenTours.Any())
+                    {
+                        return new Tour
+                        {
+                            Id = tour.Id,
+                            Title = tour.Title,
+                            ChildrenNum = tour.ChildrenNum,
+                            QuestionsNum = tour.QuestionsNum,
+                            Tours = childrenTours.ToList()
+                        };
+                    }
+                }
+
+                var questions = await connection.QueryAsync<QuestionItem>(sql3, new { tourId });
+                if (questions.Any())
+                {
+                    return new Tournament
+                    {
+                        Id = tour.Id,
+                        Title = tour.Title,
+                        ChildrenNum = tour.ChildrenNum,
+                        QuestionsNum = tour.QuestionsNum,
+                        Questions = questions.ToList()
+                    };
+                }
+                else return null;
+            }
+        }
+
+        public async Task<IEnumerable<Tour>> GetTours(byte level = 1)
+        {
+            string sql = "SELECT * FROM [cgk].[Tour] L1 WHERE L1.ParentId = 0";
+            using (SqlConnection connection = new SqlConnection(_connectionString))
+            {
+                return await connection.QueryAsync<Tour>(sql);
             }
         }
 

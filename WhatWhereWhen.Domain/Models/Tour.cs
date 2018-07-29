@@ -11,5 +11,7 @@ namespace WhatWhereWhen.Domain.Models
 
         [JsonProperty("tour")]
         public IList<Tour> Tours { get; set; }
+
+        public override string ToString() => $"#{Id} {Title}({QuestionsNum} questions)";
     }
 }

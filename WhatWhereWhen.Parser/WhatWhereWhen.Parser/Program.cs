@@ -31,11 +31,11 @@ namespace WhatWhereWhen.Parser
                     Trace.WriteLine("");
                     Trace.TraceInformation($"Start processing {link}");
                     Trace.WriteLine("");
-                    var newQ = await SendRequest(client, link, questionData);
+                    string[] newQ = await SendRequest(client, link, questionData);
 
-                    foreach (var item in newQ)
+                    foreach (string item in newQ)
                     {
-                        if (!newQ.Contains(item))
+                        if (!queue.Contains(item))
                         {
                             queue.Enqueue(item);
                         }
@@ -67,9 +67,9 @@ namespace WhatWhereWhen.Parser
 
         private static string[] GetUrls()
         {
-            return System.IO.File.ReadAllLines(@"D:\urls.txt");
+            //return System.IO.File.ReadAllLines(@"D:\urls.txt");
+            return new[] { "/tour/AUTHORS" };
         }
-
 
         private static async Task<string[]> SendRequest(HttpClient client, string url, IQuestionData questionData)
         {

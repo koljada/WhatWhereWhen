@@ -9,6 +9,7 @@ using SimpleEchoBot.Dialogs;
 using System.Diagnostics;
 
 using Activity = Microsoft.Bot.Connector.Activity;
+using WhatWhereWhen.Data.Sql;
 
 namespace Microsoft.Bot.Sample.SimpleEchoBot
 {

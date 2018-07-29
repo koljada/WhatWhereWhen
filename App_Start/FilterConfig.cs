@@ -1,4 +1,5 @@
-﻿using System.Web;
+﻿using SimpleEchoBot.ErrorHandler;
+using System.Web;
 using System.Web.Mvc;
 
 namespace SimpleEchoBot
@@ -7,7 +8,8 @@ namespace SimpleEchoBot
     {
         public static void RegisterGlobalFilters(GlobalFilterCollection filters)
         {
-            filters.Add(new ErrorHandler.AiHandleErrorAttribute());
+            filters.Add(new AiHandleErrorAttribute());
+           // filters.Add(new ExceptionFilter());
         }
     }
 }

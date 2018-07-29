@@ -9,6 +9,7 @@ using System.Web.Routing;
 using System.Web.Optimization;
 using System.Configuration;
 using System;
+using System.Web.Mvc;
 
 namespace SimpleEchoBot
 {
@@ -43,6 +44,7 @@ namespace SimpleEchoBot
 
                 });
 
+            FilterConfig.RegisterGlobalFilters(GlobalFilters.Filters);
             GlobalConfiguration.Configure(WebApiConfig.Register);
             RouteConfig.RegisterRoutes(RouteTable.Routes);
             BundleConfig.RegisterBundles(BundleTable.Bundles);

@@ -1,4 +1,6 @@
-﻿using System.Threading.Tasks;
+﻿using System.Collections;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 using WhatWhereWhen.Domain.Models;
 
 namespace WhatWhereWhen.Domain.Interfaces
@@ -11,5 +13,9 @@ namespace WhatWhereWhen.Domain.Interfaces
 
         int InsertTournament(Tournament tournament);
         int InsertTour(Tour tour);
+
+        Task<IEnumerable<Tour>> GetTours(byte level = 1);
+
+        Task<TourBase> GetTourById(int tourId);
     }
 }

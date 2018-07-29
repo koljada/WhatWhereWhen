@@ -98,6 +98,8 @@ namespace WhatWhereWhen.Domain.Models
             AnswerImageUrls = answerImageUrls;
         }
 
+        public override string ToString() => $"#{Id} {Question.Substring(1, Math.Min(15, Question.Length))}";
+
         private string GetImageUrl(string text, string baseUrl, out IList<string> urls)
         {
             urls = new List<string>();

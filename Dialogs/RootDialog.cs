@@ -30,7 +30,7 @@ namespace SimpleEchoBot.Dialogs
                     "\t\t  - type `answer` to get an answer to the current question;" + Environment.NewLine +
                     "\t\t  - type `level [0-5]` to set question's complexity level(from 1 to 5). Use 0 for any level including unknown(set by default)";
 
-        private readonly string NL = Environment.NewLine;
+        private readonly string NL = Environment.NewLine;        
 
         private static IQuestionData GetData() => new QuestionDataSql();
 
@@ -58,9 +58,9 @@ namespace SimpleEchoBot.Dialogs
 
         private bool IsTimerFeatureEnabled() => Convert.ToBoolean(ConfigurationManager.AppSettings["TimerEnabled"]);
 
-        private async Task MessageReceivedAsync(IDialogContext context, IAwaitable<object> result)
+        private async Task MessageReceivedAsync(IDialogContext context, IAwaitable<IMessageActivity> result)
         {
-            Activity activity = await result as Activity;
+            IMessageActivity activity = await result;
 
             ConversationStarter.SaveConversation(activity);
 
@@ -174,8 +174,8 @@ namespace SimpleEchoBot.Dialogs
                                     context.ConversationData.SetValue(TIMER, false);
                                     await context.PostAsync("The time is over. (time)");
                                     await botData.FlushAsync(CancellationToken.None);
-                                }                                
-                            }                            
+                                }
+                            }
                         });
 
                         await context.SayAsync("(time)");
@@ -222,6 +222,12 @@ namespace SimpleEchoBot.Dialogs
                 Trace.TraceInformation("RootDialog.MessageReceivedAsync: help case.");
                 await context.PostAsync(HELP);
             }
+            else if (text.Contains("tour"))
+            {
+                await context.Forward(new TourDialog(), ResumeAfterNewOrderDialog, activity, CancellationToken.None);
+                return;
+
+            }
             else
             {
                 Trace.TraceInformation("RootDialog.MessageReceivedAsync: other case.");
@@ -238,6 +244,18 @@ namespace SimpleEchoBot.Dialogs
             context.Wait(MessageReceivedAsync);
         }
 
+        private async Task ResumeAfterNewOrderDialog(IDialogContext context, IAwaitable<object> result)
+        {
+            // Store the value that NewOrderDialog returned. 
+            // (At this point, new order dialog has finished and returned some value to use within the root dialog.)
+            IMessageActivity resultStr = await result as IMessageActivity;
+
+            await context.PostAsync($"Tour dialog just told me this: {resultStr.Text}");
+
+            // Again, wait for the next message from the user.
+            context.Wait(this.MessageReceivedAsync);
+        }
+
         public async static Task<IMessageActivity> PostNewQuestion(IBotDataBag conversationData, IMessageActivity messageActivity)
         {
             string conversationId = messageActivity.Conversation.Id;
@@ -246,7 +264,7 @@ namespace SimpleEchoBot.Dialogs
 
             Trace.TraceInformation($"PostNewQuestion: conversation: {conversationId}; level: {level}");
 
-            QuestionItem newQuestion = await GetData().GetRandomQuestion(conversationId, (QuestionComplexity)level);
+            QuestionItem newQuestion = await new QuestionDataSql().GetRandomQuestion(conversationId, (QuestionComplexity)level);
 
             Trace.TraceInformation($"PostNewQuestion: {newQuestion.Id}, {newQuestion.Question}, {newQuestion.Answer}");
 
