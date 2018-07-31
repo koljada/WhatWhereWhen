@@ -22,7 +22,7 @@ namespace WhatWhereWhen.Domain.Models
         //public string TextId { get; set; }
 
         [JsonProperty("QuestionsNum")]
-        public short QuestionsNum { get; set; }
+        public int QuestionsNum { get; set; }
 
         [JsonProperty("Complexity")]
         public byte? Complexity { get; set; }

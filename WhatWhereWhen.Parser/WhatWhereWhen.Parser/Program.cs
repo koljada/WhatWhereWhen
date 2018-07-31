@@ -46,20 +46,7 @@ namespace WhatWhereWhen.Parser
                     Trace.WriteLine("");
                     Trace.WriteLine("******************************");
                     Trace.WriteLine("");
-                }
-                //for (int i = 0; i < links.Count; i++)
-                //{
-                //    string link = links[i];
-                //    Trace.WriteLine("");
-                //    Trace.TraceInformation($"{i + 1}. Start processing {link}");
-                //    Trace.WriteLine("");
-                //    SendRequest(client, link, questionData).Wait();
-                //    Trace.WriteLine("");
-                //    Trace.TraceInformation($"{i + 1}. End processing {link}");
-                //    Trace.WriteLine("");
-                //    Trace.WriteLine("******************************");
-                //    Trace.WriteLine("");
-                //}
+                }                
             }
 
             Console.ReadLine();
@@ -68,7 +55,7 @@ namespace WhatWhereWhen.Parser
         private static string[] GetUrls()
         {
             //return System.IO.File.ReadAllLines(@"D:\urls.txt");
-            return new[] { "/tour/AUTHORS" };
+            return new[] { "/tour/AUTHORS", "/tour/INTER", "/tour/SINHR", "/tour/NEPOLN", "/tour/REGION", "/tour/INET", "/tour/R100", "/tour/TELE", "/tour/TREN", "/tour/TEMA", "/tour/ERUDITK", "/tour/EF", "/tour/BESKR", "/tour/SVOYAK" };
         }
 
         private static async Task<string[]> SendRequest(HttpClient client, string url, IQuestionData questionData)
@@ -76,10 +63,11 @@ namespace WhatWhereWhen.Parser
             string xml = "";
             string json = null;
             JObject token = null;
+            string fullUrl = $"https://db.chgk.info{url}/xml";
 
             try
             {
-                xml = await client.GetStringAsync($"https://db.chgk.info{url}/xml");
+                xml = await client.GetStringAsync(fullUrl);
             }
             catch (Exception ex)
             {
@@ -122,27 +110,74 @@ namespace WhatWhereWhen.Parser
             {
                 var tours = token["tour"];
                 var question = token["question"];
+                if (token.Value<int?>("Complexity") > 256)
+                {
+                    token["Complexity"] = null;
+                }
+                if (token.Value<string>("PlayedAt") == "0000-00-00")
+                {
+                    token["PlayedAt"] = null;
+                }
+
                 if (tours != null)
                 {
+                    List<string> result = new List<string>();
+
+                    if (!(tours is JArray toursArray))
+                    {
+                        toursArray = new JArray { tours };
+                        token["tour"] = toursArray;
+                    }
+
+                    foreach (var ch in toursArray)
+                    {
+                        var textId = ch["TextId"].ToString();
+                        if (!string.IsNullOrEmpty(textId))
+                        {
+                            result.Add($"/tour/{textId}");
+                        }
+
+                        if (ch.Value<int?>("Complexity") > 256)
+                        {
+                            ch["Complexity"] = null;
+                        }
+                        if (ch.Value<string>("PlayedAt") == "0000-00-00")
+                        {
+                            ch["PlayedAt"] = null;
+                        }
+                    }
+
                     var tour = token.ToObject<Tour>();
+                    if (string.IsNullOrWhiteSpace(tour.URL))
+                    {
+                        tour.URL = fullUrl;
+                    }
                     questionData.InsertTour(tour);
-                    var childs = (tours as JArray).Select(x => $"/tour/{x["TextId"]}").ToArray();
-                    return childs;
+
+                    return result.ToArray();
                 }
                 else if (question != null)
                 {
+                    if (!(question is JArray questionsArray))
+                    {
+                        questionsArray = new JArray { question };
+                        token["question"] = questionsArray;
+                    }
+
                     var tournament = token.ToObject<Tournament>();
+                    if (string.IsNullOrWhiteSpace(tournament.URL))
+                    {
+                        tournament.URL = fullUrl;
+                    }
+
                     questionData.InsertTournament(tournament);
                 }
-                else
-                {
-                    var tt = 3;
-                }
+                
                 return new string[] { };
             }
             catch (Exception ex)
             {
-                Trace.TraceError("Exception when inserting to DB", ex);
+                Trace.TraceError($"Exception when inserting to DB, {ex.Message}", ex);
                 return new string[] { };
             }
         }

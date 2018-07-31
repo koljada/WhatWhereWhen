@@ -174,7 +174,7 @@ namespace WhatWhereWhen.Data.Sql
                 }
                 catch (Exception ex)
                 {
-                    Trace.TraceError($"Exception when inserting tour #{tour.Id}", ex);
+                    Trace.TraceError($"Exception when inserting tour #{tour.Id}. {ex.Message}", ex);
                     state = "Error";
                 }
             }
@@ -227,7 +227,7 @@ namespace WhatWhereWhen.Data.Sql
                             }
                             catch (Exception ex)
                             {
-                                Trace.TraceError($"Exception when inserting question #{question.Id}", ex);
+                                Trace.TraceError($"Exception when inserting question #{question.Id}. {ex.Message}", ex);
                                 error++;
                             }
                         }
@@ -237,12 +237,10 @@ namespace WhatWhereWhen.Data.Sql
                         Trace.TraceInformation($"Tounament #{tournament.Id} already exists");
                         state = "Skipped";
                     }
-
-
                 }
                 catch (Exception ex)
                 {
-                    Trace.TraceError($"Exception when inserting tournament #{tournament.Id}", ex);
+                    Trace.TraceError($"Exception when inserting tournament #{tournament.Id}. {ex.Message}", ex);
                     state = "Error";
                 }
             }
