@@ -95,17 +95,25 @@ namespace SimpleEchoBot.Dialogs
 
                     await botData.LoadAsync(CancellationToken.None);
 
-                    IMessageActivity temp = message.CreateReply().AsMessageActivity();
-
-                    IMessageActivity reply = await RootDialog.PostNewQuestion(botData.ConversationData, temp);
-
-                    if (reply != null)
+                    string todayDate = DateTime.UtcNow.ToShortDateString();
+                    if (botData.ConversationData.GetValueOrDefault<string>("today") != todayDate)
                     {
-                        await client.Conversations.SendToConversationAsync((Activity)reply);
-                    }
+                        botData.ConversationData.SetValue("today", todayDate);
+                        await botData.FlushAsync(CancellationToken.None);
+                        await botData.LoadAsync(CancellationToken.None);
 
-                    //flush dialog stack
-                    await botData.FlushAsync(CancellationToken.None);
+                        IMessageActivity temp = message.CreateReply().AsMessageActivity();
+
+                        IMessageActivity reply = await RootDialog.PostNewQuestion(botData.ConversationData, temp);
+
+                        if (reply != null)
+                        {
+                            await client.Conversations.SendToConversationAsync((Activity)reply);
+                        }
+
+                        //flush dialog stack
+                        await botData.FlushAsync(CancellationToken.None);
+                    }                    
                 }
             }
             catch (Exception ex)

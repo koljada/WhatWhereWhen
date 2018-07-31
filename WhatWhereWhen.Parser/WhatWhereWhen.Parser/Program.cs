@@ -21,16 +21,16 @@ namespace WhatWhereWhen.Parser
             var errors = new List<string>();
             var queue = new Queue<string>(GetUrls());
 
-            IQuestionData questionData = new QuestionDataSql(true);
+            QuestionDataSql questionData = new QuestionDataSql(true);
 
             using (HttpClient client = new HttpClient())
             {
                 while (queue.Count > 0)
                 {
                     string link = queue.Dequeue();
-                    Trace.WriteLine("");
-                    Trace.TraceInformation($"Start processing {link}");
-                    Trace.WriteLine("");
+                    //Trace.WriteLine("");
+                    //Trace.TraceInformation($"Start processing {link}");
+                    //Trace.WriteLine("");
                     string[] newQ = await SendRequest(client, link, questionData);
 
                     foreach (string item in newQ)
@@ -41,11 +41,11 @@ namespace WhatWhereWhen.Parser
                         }
                     }
 
-                    Trace.WriteLine("");
-                    Trace.TraceInformation($"End processing {link}");
-                    Trace.WriteLine("");
-                    Trace.WriteLine("******************************");
-                    Trace.WriteLine("");
+                    //Trace.WriteLine("");
+                    //Trace.TraceInformation($"End processing {link}");
+                    //Trace.WriteLine("");
+                    //Trace.WriteLine("******************************");
+                    //Trace.WriteLine("");
                 }                
             }
 
@@ -58,7 +58,7 @@ namespace WhatWhereWhen.Parser
             return new[] { "/tour/AUTHORS", "/tour/INTER", "/tour/SINHR", "/tour/NEPOLN", "/tour/REGION", "/tour/INET", "/tour/R100", "/tour/TELE", "/tour/TREN", "/tour/TEMA", "/tour/ERUDITK", "/tour/EF", "/tour/BESKR", "/tour/SVOYAK" };
         }
 
-        private static async Task<string[]> SendRequest(HttpClient client, string url, IQuestionData questionData)
+        private static async Task<string[]> SendRequest(HttpClient client, string url, QuestionDataSql questionData)
         {
             string xml = "";
             string json = null;
@@ -118,7 +118,7 @@ namespace WhatWhereWhen.Parser
                 {
                     token["PlayedAt"] = null;
                 }
-
+                int id = token.Value<int>("Id");
                 if (tours != null)
                 {
                     List<string> result = new List<string>();
@@ -137,40 +137,41 @@ namespace WhatWhereWhen.Parser
                             result.Add($"/tour/{textId}");
                         }
 
-                        if (ch.Value<int?>("Complexity") > 256)
-                        {
-                            ch["Complexity"] = null;
-                        }
-                        if (ch.Value<string>("PlayedAt") == "0000-00-00")
-                        {
-                            ch["PlayedAt"] = null;
-                        }
+                        //if (ch.Value<int?>("Complexity") > 256)
+                        //{
+                        //    ch["Complexity"] = null;
+                        //}
+                        //if (ch.Value<string>("PlayedAt") == "0000-00-00")
+                        //{
+                        //    ch["PlayedAt"] = null;
+                        //}
                     }
 
-                    var tour = token.ToObject<Tour>();
-                    if (string.IsNullOrWhiteSpace(tour.URL))
-                    {
-                        tour.URL = fullUrl;
-                    }
-                    questionData.InsertTour(tour);
+                    //var tour = token.ToObject<Tour>();
+                    //if (string.IsNullOrWhiteSpace(tour.URL))
+                    //{
+                    //    tour.URL = fullUrl;
+                    //}
+                    //questionData.InsertTour(tour);
 
                     return result.ToArray();
                 }
                 else if (question != null)
                 {
-                    if (!(question is JArray questionsArray))
-                    {
-                        questionsArray = new JArray { question };
-                        token["question"] = questionsArray;
-                    }
+                    //if (!(question is JArray questionsArray))
+                    //{
+                    //    questionsArray = new JArray { question };
+                    //    token["question"] = questionsArray;
+                    //}
 
-                    var tournament = token.ToObject<Tournament>();
-                    if (string.IsNullOrWhiteSpace(tournament.URL))
-                    {
-                        tournament.URL = fullUrl;
-                    }
+                    //var tournament = token.ToObject<Tournament>();
+                    //if (string.IsNullOrWhiteSpace(tournament.URL))
+                    //{
+                    //    tournament.URL = fullUrl;
+                    //}
 
-                    questionData.InsertTournament(tournament);
+                    //questionData.InsertTournament(tournament);
+                    questionData.UpdateUrl(id, fullUrl);
                 }
                 
                 return new string[] { };

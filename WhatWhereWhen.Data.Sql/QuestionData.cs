@@ -36,7 +36,9 @@ namespace WhatWhereWhen.Data.Sql
         {
             using (SqlConnection connection = new SqlConnection(_connectionString))
             {
-                string sql = @"SELECT TOP 1 Q.* FROM [cgk].[Question] Q 
+                string sql = @"SELECT TOP 1 Q.[Id], Q.[Question], Q.[Answer], Q.[Rating], Q.[Complexity], Q.[Comments],  
+                                    Q.[Sources], Q.[Authors], Q.[TournamentTitle], Q.[TournamentId] 
+                                FROM [cgk].[Question] Q 
                                 LEFT JOIN [cgk].[QuestionConversation] QC ON Q.Id = QC.QuestionId AND QC.ConversationId = @conversationId
                                 WHERE QC.ConversationId IS NULL AND (ABS(CAST((BINARY_CHECKSUM(Id) * RAND()) as int)) % 100) < 10 AND Q.TypeNum = 1";
 
@@ -49,7 +51,7 @@ namespace WhatWhereWhen.Data.Sql
 
                 if (result != null && markAsRead)
                 {
-                    string markSql = $"INSERT [cgk].[QuestionConversation] VALUES(@qustionId, @conversationId);";
+                    string markSql = $"INSERT [cgk].[QuestionConversation] VALUES(@qustionId, @conversationId, GETDATE());";
                     await connection.ExecuteScalarAsync(markSql, new { qustionId = result.Id, conversationId });
                 }
 
@@ -195,47 +197,47 @@ namespace WhatWhereWhen.Data.Sql
             {
                 try
                 {
-                    Trace.TraceInformation($"Checking tounament #{tournament.Id} ({tournament.QuestionsNum})");
-                    if (!Exist(connection, tournament))
+                    //Trace.TraceInformation($"Checking tounament #{tournament.Id} ({tournament.QuestionsNum})");
+                    //if (!Exist(connection, tournament))
+                    //{
+                    //    //Trace.TraceInformation($"Inserting tounament #{tournament.Id}");
+                    //    tournament.ImportedAt = DateTime.UtcNow;
+                    //    connection.Insert(tournament);
+                    //    state = "Inserted";
+                    //}
+                    //else
+                    //{
+                    //    Trace.TraceInformation($"Tounament #{tournament.Id} already exists");
+                    //    state = "Skipped";
+                    //}
+
+                    foreach (var question in tournament.Questions)
                     {
-                        Trace.TraceInformation($"Inserting tounament #{tournament.Id}");
-                        tournament.ImportedAt = DateTime.UtcNow;
-                        connection.Insert(tournament);
-                        state = "Inserted";
-
-                        foreach (var question in tournament.Questions)
+                        try
                         {
-                            try
+                            //Trace.TraceInformation($"Checking question #{question.Id}");
+                            if (!Exist(connection, question))
                             {
-                                //Trace.TraceInformation($"Checking question #{question.Id}");
-                                if (!Exist(connection, question))
-                                {
-                                    //Trace.TraceInformation($"Inserting question #{question.Id}");
+                                Trace.TraceInformation($"Inserting question #{question.Id}");
 
-                                    question.TournamentId = tournament.Id;
-                                    question.TournamentTitle = tournament.Title;
-                                    question.ImportedAt = DateTime.UtcNow;
+                                question.TournamentId = tournament.Id;
+                                question.TournamentTitle = tournament.Title;
+                                question.ImportedAt = DateTime.UtcNow;
 
-                                    connection.Insert(question);
-                                    inserted++;
-                                }
-                                else
-                                {
-                                    //Trace.TraceInformation($"Question #{question.Id} already exists");
-                                    skipped++;
-                                }
+                                connection.Insert(question);
+                                inserted++;
                             }
-                            catch (Exception ex)
+                            else
                             {
-                                Trace.TraceError($"Exception when inserting question #{question.Id}. {ex.Message}", ex);
-                                error++;
+                                //Trace.TraceInformation($"Question #{question.Id} already exists");
+                                skipped++;
                             }
                         }
-                    }
-                    else
-                    {
-                        Trace.TraceInformation($"Tounament #{tournament.Id} already exists");
-                        state = "Skipped";
+                        catch (Exception ex)
+                        {
+                            Trace.TraceError($"Exception when inserting question #{question.Id}. {ex.Message}", ex);
+                            error++;
+                        }
                     }
                 }
                 catch (Exception ex)
@@ -249,6 +251,23 @@ namespace WhatWhereWhen.Data.Sql
                 $" {inserted} questions have need inserted; {skipped} questions have been skipped; {error} have been missed(there was an exception).");
 
             return tournament.Questions.Count;
+        }
+
+        public void UpdateUrl(int id, string url)
+        {
+            string sql = "UPDATE [cgk].[Tour] SET [URL]=@url WHERE [Id]=@id";
+            using (SqlConnection connection = new SqlConnection(_connectionString))
+            {
+                try
+                {
+                    connection.ExecuteScalar(sql, new { id, url });
+                    Trace.TraceInformation($"#{id} {url}");
+                }
+                catch (Exception ex)
+                {
+                    Trace.TraceError($"Exception when updating url #{id}. {ex.Message}", ex);
+                }
+            }
         }
 
         private bool Exist<T>(SqlConnection connection, T model) where T : BaseEntity

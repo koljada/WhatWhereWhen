@@ -14,7 +14,6 @@ using System.Threading.Tasks;
 using WhatWhereWhen.Data.Sql;
 using WhatWhereWhen.Domain.Interfaces;
 using WhatWhereWhen.Domain.Models;
-using Activity = Microsoft.Bot.Connector.Activity;
 
 namespace SimpleEchoBot.Dialogs
 {
@@ -28,9 +27,9 @@ namespace SimpleEchoBot.Dialogs
         private readonly string HELP = "Commands: " + Environment.NewLine +
                     "\t\t  - type `new` to get a new question;" + Environment.NewLine +
                     "\t\t  - type `answer` to get an answer to the current question;" + Environment.NewLine +
-                    "\t\t  - type `level [0-5]` to set question's complexity level(from 1 to 5). Use 0 for any level including unknown(set by default)";
+                    "\t\t  - type `level` to select a complexity level";
 
-        private readonly string NL = Environment.NewLine;        
+        private readonly string NL = Environment.NewLine;
 
         private static IQuestionData GetData() => new QuestionDataSql();
 
@@ -197,18 +196,9 @@ namespace SimpleEchoBot.Dialogs
                 else
                 {
                     IMessageActivity reply = context.MakeMessage();
-                    List<CardAction> actions = Enumerable.Range(1, 5).Select(x => new CardAction
-                    {
-                        Title = x.ToString(),
-                        Type = "imBack",
-                        Value = "level " + x
-                    }).ToList();
-
-                    actions.Insert(0, new CardAction("imBack", "Random", value: "level 0"));
-                    reply.Text = "Please select a level";
-                    reply.SuggestedActions = new SuggestedActions(null, actions);
-
-                    await context.PostAsync(reply);
+                    Dictionary<byte, string> options = Enumerable.Range(0, 6).ToDictionary(x => (byte)x, x => x == 0 ? "Random" : x.ToString());
+                    PromptDialog.Choice(context, ResumeAfterSelectLevel, options.Keys, "Please select a level", descriptions: options.Values);
+                    return;
                 };
 
             }
@@ -242,6 +232,13 @@ namespace SimpleEchoBot.Dialogs
             }
 
             context.Wait(MessageReceivedAsync);
+        }
+
+        private async Task ResumeAfterSelectLevel(IDialogContext context, IAwaitable<byte> result)
+        {
+            byte level = await result;
+            context.ConversationData.SetValue(KEY_LEVEL, level);
+            await context.SayAsync($"Level is set to {(level == 0 ? "random" : level.ToString())}");
         }
 
         private async Task ResumeAfterNewOrderDialog(IDialogContext context, IAwaitable<object> result)
