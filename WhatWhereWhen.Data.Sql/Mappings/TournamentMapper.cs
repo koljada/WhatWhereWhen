@@ -8,7 +8,7 @@ namespace WhatWhereWhen.Data.Sql.Mappings
         {
             TableName = "Tour";
 
-            Map(x => x.Questions).Ignore();
+            Map(x => x.Tours).Ignore();
 
             AutoMap();
         }

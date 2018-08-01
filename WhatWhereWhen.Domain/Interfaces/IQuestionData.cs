@@ -12,7 +12,8 @@ namespace WhatWhereWhen.Domain.Interfaces
         Task<QuestionItem> GetRandomQuestion(string conversationId, QuestionComplexity? complexity = QuestionComplexity.Middle, bool markAsRead = true);
 
         int InsertTournament(Tournament tournament);
-        int InsertTour(Tour tour);
+
+        int InsertTour(Tour tour, Tournament tournament);
 
         Task<IEnumerable<Tour>> GetTours(byte level = 1);
 

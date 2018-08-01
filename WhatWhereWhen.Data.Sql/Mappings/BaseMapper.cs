@@ -7,7 +7,7 @@ namespace WhatWhereWhen.Data.Sql.Mappings
     {
         public BaseMapper()
         {
-            SchemaName = "cgk";
+            SchemaName = "www";
 
             Map(x => x.Id).Key(KeyType.Assigned);
 

@@ -68,12 +68,5 @@ namespace WhatWhereWhen.Domain.Models
 
         //[JsonProperty("ParentTextId")]
         //public string ParentTextId { get; set; }
-        public virtual TourType TourType { get; }
-    }
-
-    public enum TourType : byte
-    {
-        Tour,
-        Tournament
     }
 }

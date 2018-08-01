@@ -31,22 +31,22 @@ namespace WhatWhereWhen.Parser
                     //Trace.WriteLine("");
                     //Trace.TraceInformation($"Start processing {link}");
                     //Trace.WriteLine("");
-                    string[] newQ = await SendRequest(client, link, questionData);
+                    await SendRequest(client, link, questionData);
 
-                    foreach (string item in newQ)
-                    {
-                        if (!queue.Contains(item))
-                        {
-                            queue.Enqueue(item);
-                        }
-                    }
+                    //foreach (string item in newQ)
+                    //{
+                    //    if (!queue.Contains(item))
+                    //    {
+                    //        queue.Enqueue(item);
+                    //    }
+                    //}
 
                     //Trace.WriteLine("");
                     //Trace.TraceInformation($"End processing {link}");
                     //Trace.WriteLine("");
                     //Trace.WriteLine("******************************");
                     //Trace.WriteLine("");
-                }                
+                }
             }
 
             Console.ReadLine();
@@ -55,26 +55,15 @@ namespace WhatWhereWhen.Parser
         private static string[] GetUrls()
         {
             //return System.IO.File.ReadAllLines(@"D:\urls.txt");
-            return new[] { "/tour/AUTHORS", "/tour/INTER", "/tour/SINHR", "/tour/NEPOLN", "/tour/REGION", "/tour/INET", "/tour/R100", "/tour/TELE", "/tour/TREN", "/tour/TEMA", "/tour/ERUDITK", "/tour/EF", "/tour/BESKR", "/tour/SVOYAK" };
+            return new[] {
+                //"/tour/AUTHORS", "/tour/INTER", "/tour/SINHR", "/tour/NEPOLN", "/tour/REGION", "/tour/INET",
+                //"/tour/R100", "/tour/TELE", "/tour/TREN", "/tour/TEMA", "/tour/ERUDITK", "/tour/EF", "/tour/BESKR",
+                "/tour/SVOYAK" };
+            //return new[] { "/tour/AUTHORS", "/tour/INTER", "/tour/SINHR", "/tour/NEPOLN", "/tour/REGION", "/tour/INET", "/tour/R100", "/tour/TELE", "/tour/TREN", "/tour/TEMA", "/tour/ERUDITK", "/tour/EF", "/tour/BESKR", "/tour/SVOYAK" };
         }
 
-        private static async Task<string[]> SendRequest(HttpClient client, string url, QuestionDataSql questionData)
+        private static JObject ParseString(string xml)
         {
-            string xml = "";
-            string json = null;
-            JObject token = null;
-            string fullUrl = $"https://db.chgk.info{url}/xml";
-
-            try
-            {
-                xml = await client.GetStringAsync(fullUrl);
-            }
-            catch (Exception ex)
-            {
-                Trace.TraceError("Exception when get request", ex);
-                return new string[] { };
-            }
-
             XmlDocument doc = new XmlDocument();
             try
             {
@@ -83,103 +72,152 @@ namespace WhatWhereWhen.Parser
             catch (Exception ex)
             {
                 Trace.TraceError("Exception when loading text to XmlDocument", ex);
-                return new string[] { };
+                return null;
             }
 
             try
             {
-                json = JsonConvert.SerializeXmlNode(doc.LastChild, Newtonsoft.Json.Formatting.None, true);
+                string json = JsonConvert.SerializeXmlNode(doc.LastChild, Newtonsoft.Json.Formatting.None, true);
+                try
+                {
+                    return JObject.Parse(json);
+                }
+                catch (Exception ex)
+                {
+                    Trace.TraceError("Exception when parsing JToken", ex);
+                    return null;
+                }
             }
             catch (Exception ex)
             {
                 Trace.TraceError("Exception when Serializing to XmlNode", ex);
-                return new string[] { };
+                return null;
+            }
+        }
+
+        private static void FixSchemaErrors(string url, ref JObject token)
+        {
+            if (token.Value<int?>("Complexity") > 256)
+            {
+                token["Complexity"] = null;
+            }
+            if (token.Value<string>("PlayedAt") == "0000-00-00")
+            {
+                token["PlayedAt"] = null;
             }
 
+            token["Copyright"] = url;
+        }
+
+        private static async Task SendRequest(HttpClient client, string url, QuestionDataSql questionData, Tournament parentTournament = null)
+        {
+            string xml = "";
+            string fullUrl = $"https://db.chgk.info{url}/xml";
+            Trace.WriteLine("");
+            Trace.WriteLine(fullUrl);
+            Trace.WriteLine("");
             try
             {
-                token = JObject.Parse(json);
+                xml = await client.GetStringAsync(fullUrl);
             }
             catch (Exception ex)
             {
-                Trace.TraceError("Exception when parsing JToken", ex);
-                return new string[] { };
+                Trace.TraceError("Exception when get request", ex);
             }
+
+            JObject token = ParseString(xml);
 
             try
             {
-                var tours = token["tour"];
-                var question = token["question"];
-                if (token.Value<int?>("Complexity") > 256)
-                {
-                    token["Complexity"] = null;
-                }
-                if (token.Value<string>("PlayedAt") == "0000-00-00")
-                {
-                    token["PlayedAt"] = null;
-                }
-                int id = token.Value<int>("Id");
-                if (tours != null)
-                {
-                    List<string> result = new List<string>();
+                FixSchemaErrors(fullUrl, ref token);
 
-                    if (!(tours is JArray toursArray))
+                string type = token.Value<string>("Type");
+                int id = token.Value<int>("Id");
+
+                if (type == "Г")
+                {
+                    var tours = token["tour"];
+
+                    if (!(tours is JArray))
                     {
-                        toursArray = new JArray { tours };
-                        token["tour"] = toursArray;
+                        token["tour"] = new JArray { tours };
                     }
 
-                    foreach (var ch in toursArray)
+                    var childTournaments = (token["tour"] as JArray).Select(x => $"/tour/{x["TextId"]}");//Ч
+
+                    token["tour"] = null;
+
+                    Tournament tournament = token.ToObject<Tournament>();
+                    questionData.InsertTournament(tournament);
+
+                    foreach (string tournamentUrl in childTournaments)
                     {
-                        var textId = ch["TextId"].ToString();
-                        if (!string.IsNullOrEmpty(textId))
+                        await SendRequest(client, tournamentUrl, questionData);
+                    }
+                }
+                else if (type == "Ч")
+                {
+                    var questions = token["question"];
+                    var tours = new List<string>();
+
+
+                    if (questions != null)
+                    {
+                        if (!(questions is JArray))
                         {
-                            result.Add($"/tour/{textId}");
+                            token["question"] = new JArray { questions };
                         }
 
-                        //if (ch.Value<int?>("Complexity") > 256)
-                        //{
-                        //    ch["Complexity"] = null;
-                        //}
-                        //if (ch.Value<string>("PlayedAt") == "0000-00-00")
-                        //{
-                        //    ch["PlayedAt"] = null;
-                        //}
+                        tours = (token["question"] as JArray).Select(x => $"/tour/{x["ParentTextId"]}")
+                            .Distinct()
+                            .ToList();//Т
+                    }
+                    else
+                    {
+                        var tour = token["tour"];
+
+                        if (!(tour is JArray))
+                        {
+                            token["tour"] = new JArray { tour };
+                        }
+
+                        tours = (token["tour"] as JArray).Select(x => $"/tour/{x["TextId"]}")
+                            .Distinct()
+                            .ToList();//Ч
+
+                        token["tour"] = null;
+                    }
+                   
+
+                    token["question"] = null;
+
+                    Tournament tournament = token.ToObject<Tournament>();
+                    questionData.InsertTournament(tournament);
+
+                    foreach (string tourUrl in tours)
+                    {
+                        await SendRequest(client, tourUrl, questionData, tournament);
+                    }
+                }
+                else if (type == "Т")
+                {
+                    JToken question = token["question"];
+                    if (!(question is JArray))
+                    {
+                        token["question"] = new JArray { question };
                     }
 
-                    //var tour = token.ToObject<Tour>();
-                    //if (string.IsNullOrWhiteSpace(tour.URL))
-                    //{
-                    //    tour.URL = fullUrl;
-                    //}
-                    //questionData.InsertTour(tour);
-
-                    return result.ToArray();
+                    Tour tour = token.ToObject<Tour>();
+                    questionData.InsertTour(tour, parentTournament);
                 }
-                else if (question != null)
+                else
                 {
-                    //if (!(question is JArray questionsArray))
-                    //{
-                    //    questionsArray = new JArray { question };
-                    //    token["question"] = questionsArray;
-                    //}
-
-                    //var tournament = token.ToObject<Tournament>();
-                    //if (string.IsNullOrWhiteSpace(tournament.URL))
-                    //{
-                    //    tournament.URL = fullUrl;
-                    //}
-
-                    //questionData.InsertTournament(tournament);
-                    questionData.UpdateUrl(id, fullUrl);
+                    throw new NotSupportedException();
                 }
-                
-                return new string[] { };
             }
             catch (Exception ex)
             {
                 Trace.TraceError($"Exception when inserting to DB, {ex.Message}", ex);
-                return new string[] { };
             }
         }
     }

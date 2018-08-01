@@ -6,7 +6,7 @@ namespace WhatWhereWhen.Data.Sql.Mappings
     {
         public TourMapper()
         {            
-            Map(x => x.Tours).Ignore();
+            Map(x => x.Questions).Ignore();
 
             AutoMap();
         }

@@ -6,10 +6,8 @@ namespace WhatWhereWhen.Domain.Models
 {
     [Serializable]
     public class Tournament : TourBase
-    {
-        public override TourType TourType => TourType.Tournament;
-
-        [JsonProperty("question")]
-        public IList<QuestionItem> Questions { get; set; }
+    {        
+        [JsonProperty("tour")]
+        public IList<Tour> Tours { get; set; }
     }
 }
