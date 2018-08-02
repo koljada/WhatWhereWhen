@@ -186,20 +186,20 @@ namespace WhatWhereWhen.Data.Sql
                     if (tour.Type != "Т")
                     {
                         int maxId = connection.ExecuteScalar<int>("SELECT MAX(Id) FROM www.Tour");
-                        var newTour = new Tour
-                        {
-                            Id = ++maxId,
-                            ParentId = tour.Id,
-                            ImportedAt = DateTime.UtcNow,
-                            Copyright = tour.Copyright,
-                            Title = tour.Title + "-auto",
-                            QuestionsNum = tour.Questions.Count,
-                            ChildrenNum = 0,
-                            Type = "Т"
-                        };
-                        connection.Insert(newTour);
-                        tourId = newTour.Id;
-                        tournamentId = tour.Id;
+                        //var newTour = new Tour
+                        //{
+                        //    Id = ++maxId,
+                        //    ParentId = tour.Id,
+                        //    ImportedAt = DateTime.UtcNow,
+                        //    Copyright = tour.Copyright,
+                        //    Title = tour.Title + "-auto",
+                        //    QuestionsNum = tour.Questions.Count,
+                        //    ChildrenNum = 0,
+                        //    Type = "Т"
+                        //};
+                        //connection.Insert(newTour);
+                        //tourId = newTour.Id;
+                        //tournamentId = tour.Id;
                     }
 
                     foreach (var question in tour.Questions)

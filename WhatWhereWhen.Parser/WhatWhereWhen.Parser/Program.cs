@@ -58,8 +58,7 @@ namespace WhatWhereWhen.Parser
             return new[] {
                 //"/tour/AUTHORS", "/tour/INTER", "/tour/SINHR", "/tour/NEPOLN", "/tour/REGION", "/tour/INET",
                 //"/tour/R100", "/tour/TELE", "/tour/TREN", "/tour/TEMA", "/tour/ERUDITK", "/tour/EF", "/tour/BESKR",
-                //
-                "/tour/INTBES","/tour/RASSBES" };
+                "/tour/stre16br","/tour/univ16br" };
             //return new[] { "/tour/AUTHORS", "/tour/INTER", "/tour/SINHR", "/tour/NEPOLN", "/tour/REGION", "/tour/INET", "/tour/R100", "/tour/TELE", "/tour/TREN", "/tour/TEMA", "/tour/ERUDITK", "/tour/EF", "/tour/BESKR", "/tour/SVOYAK" };
         }
 
@@ -168,18 +167,22 @@ namespace WhatWhereWhen.Parser
                         {
                             token["question"] = new JArray { questions };
                         }
-
-                        if ((token["question"] as JArray).Any(x => !x["ParentTextId"].HasValues))
+                                               
+                        foreach (var x in (token["question"] as JArray))
                         {
-                            Tour tour = token.ToObject<Tour>();
-                            questionData.InsertTour(tour, parentTournament);
-                            return;
-                        }
-                        else
-                        {
-                            tours = (token["question"] as JArray).Select(x => $"/tour/{x["ParentTextId"]}")
-                                .Distinct()
-                                .ToList();//Т
+                            var t = x["ParentTextId"];
+                            if (t.HasValues)
+                            {
+                                tours.Add($"/tour/{x["ParentTextId"]}");
+                            }
+                            else
+                            {
+                                string textId = "/tour/" + x["TextId"].ToString().Split('-')[0];
+                                if (!tours.Contains(textId))
+                                {
+                                    tours.Add(textId);
+                                }
+                            }
                         }
                     }
                     else
