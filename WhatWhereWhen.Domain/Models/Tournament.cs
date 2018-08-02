@@ -8,6 +8,6 @@ namespace WhatWhereWhen.Domain.Models
     public class Tournament : TourBase
     {        
         [JsonProperty("tour")]
-        public IList<Tour> Tours { get; set; }
+        public IList<TourBase> Tours { get; set; }
     }
 }

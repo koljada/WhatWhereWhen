@@ -17,6 +17,7 @@ namespace WhatWhereWhen.Data.Sql
     public class QuestionDataSql : IQuestionData
     {
         private readonly string _connectionString;
+        private const string SCHEMA = "www";
 
         public QuestionDataSql(bool withMapping = false)
         {
@@ -36,22 +37,13 @@ namespace WhatWhereWhen.Data.Sql
         {
             using (SqlConnection connection = new SqlConnection(_connectionString))
             {
-                string sql = @"SELECT TOP 1 Q.[Id], Q.[Question], Q.[Answer], Q.[Rating], Q.[Complexity], Q.[Comments],  
-                                    Q.[Sources], Q.[Authors], Q.[TournamentTitle], Q.[TournamentId] 
-                                FROM [cgk].[Question] Q 
-                                LEFT JOIN [cgk].[QuestionConversation] QC ON Q.Id = QC.QuestionId AND QC.ConversationId = @conversationId
-                                WHERE QC.ConversationId IS NULL AND (ABS(CAST((BINARY_CHECKSUM(Id) * RAND()) as int)) % 100) < 10 AND Q.TypeNum = 1";
-
-                if (complexity > 0)
-                {
-                    sql += $" AND Q.Complexity = " + (byte)complexity;
-                }
-
-                var result = await connection.QueryFirstOrDefaultAsync<QuestionItem>(sql, new { conversationId });
+                var result = await connection.QueryFirstOrDefaultAsync<QuestionItem>($"[{SCHEMA}].[GetRandomQuestion]",
+                    new { conversationId, complexity = (byte)complexity },
+                    commandType: CommandType.StoredProcedure);
 
                 if (result != null && markAsRead)
                 {
-                    string markSql = $"INSERT [cgk].[QuestionConversation] VALUES(@qustionId, @conversationId, GETDATE());";
+                    string markSql = $"INSERT [{SCHEMA}].[QuestionConversation] VALUES(@qustionId, @conversationId, GETDATE());";
                     await connection.ExecuteScalarAsync(markSql, new { qustionId = result.Id, conversationId });
                 }
 
@@ -61,53 +53,46 @@ namespace WhatWhereWhen.Data.Sql
 
         public async Task<TourBase> GetTourById(int tourId)
         {
-            string sql = "SELECT TOP (1) Id, Title, Type, ChildrenNum, QuestionsNum  FROM [cgk].[Tour] WHERE Id = @tourId";
-            string sql2 = "SELECT Id, Title, Type, ChildrenNum, QuestionsNum FROM [cgk].[Tour] WHERE ParentId = @tourId";
-            string sql3 = "SELECT * FROM [cgk].[Question] WHERE TournamentId = @tourId";
-
             using (SqlConnection connection = new SqlConnection(_connectionString))
             {
+                string sql = $"SELECT TOP (1) Id, Title, Type, ChildrenNum, QuestionsNum  FROM [{SCHEMA}].[Tour] WHERE Id = @tourId";
                 var tour = await connection.QueryFirstOrDefaultAsync<TourBase>(sql, new { tourId });
 
                 if (tour.Type != "Т")
                 {
-
-                    var childrenTours = await connection.QueryAsync<Tour>(sql2, new { tourId });
-                    if (childrenTours.Any())
-                    {
-                        return new Tour
-                        {
-                            Id = tour.Id,
-                            Title = tour.Title,
-                            ChildrenNum = tour.ChildrenNum,
-                            QuestionsNum = tour.QuestionsNum,
-                            //Tours = childrenTours.ToList()
-                        };
-                    }
-                }
-
-                var questions = await connection.QueryAsync<QuestionItem>(sql3, new { tourId });
-                if (questions.Any())
-                {
+                    string sql2 = $"SELECT Id, Title, Type, ChildrenNum, QuestionsNum FROM [{SCHEMA}].[Tour] WHERE ParentId = @tourId";
+                    var childrenTours = await connection.QueryAsync<TourBase>(sql2, new { tourId });
                     return new Tournament
                     {
                         Id = tour.Id,
                         Title = tour.Title,
                         ChildrenNum = tour.ChildrenNum,
                         QuestionsNum = tour.QuestionsNum,
-                        //Questions = questions.ToList()
+                        Tours = childrenTours.AsList()
                     };
                 }
-                else return null;
+                else
+                {
+                    string sql3 = $"SELECT * FROM [{SCHEMA}].[Question] WHERE ParentId = @tourId";
+                    var questions = await connection.QueryAsync<QuestionItem>(sql3, new { tourId });
+
+                    return new Tour
+                    {
+                        Id = tour.Id,
+                        Title = tour.Title,
+                        ChildrenNum = tour.ChildrenNum,
+                        QuestionsNum = tour.QuestionsNum,
+                        Questions = questions.AsList()
+                    };
+                }
             }
         }
 
         public async Task<IEnumerable<Tour>> GetTours(byte level = 1)
         {
-            string sql = "SELECT * FROM [cgk].[Tour] L1 WHERE L1.ParentId = 0";
             using (SqlConnection connection = new SqlConnection(_connectionString))
             {
-                return await connection.QueryAsync<Tour>(sql);
+                return await connection.QueryAsync<Tour>($"SELECT * FROM [{SCHEMA}].[Tour] WHERE ParentId = 0 AND Id<>0");
             }
         }
 
@@ -172,8 +157,6 @@ namespace WhatWhereWhen.Data.Sql
                         tour.ImportedAt = DateTime.UtcNow;
                         connection.Insert(tour);
                         state = "Inserted";
-
-
                     }
                     else
                     {
@@ -182,26 +165,7 @@ namespace WhatWhereWhen.Data.Sql
                     }
                     int tourId = tour.Id;
                     int tournamentId = tournament?.Id ?? tour.ParentId;
-
-                    if (tour.Type != "Т")
-                    {
-                        int maxId = connection.ExecuteScalar<int>("SELECT MAX(Id) FROM www.Tour");
-                        //var newTour = new Tour
-                        //{
-                        //    Id = ++maxId,
-                        //    ParentId = tour.Id,
-                        //    ImportedAt = DateTime.UtcNow,
-                        //    Copyright = tour.Copyright,
-                        //    Title = tour.Title + "-auto",
-                        //    QuestionsNum = tour.Questions.Count,
-                        //    ChildrenNum = 0,
-                        //    Type = "Т"
-                        //};
-                        //connection.Insert(newTour);
-                        //tourId = newTour.Id;
-                        //tournamentId = tour.Id;
-                    }
-
+                    
                     foreach (var question in tour.Questions)
                     {
                         try
@@ -215,7 +179,6 @@ namespace WhatWhereWhen.Data.Sql
                                 question.ParentId = tourId;
                                 question.TourId = tourId;
                                 question.TournamentId = tournamentId;
-                                question.TournamentTitle = tournament?.Title;
                                 question.ImportedAt = DateTime.UtcNow;
 
                                 connection.Insert(question);
@@ -281,28 +244,9 @@ namespace WhatWhereWhen.Data.Sql
 
             return 1;
         }
-
-        public void UpdateUrl(int id, string url)
-        {
-            string sql = "UPDATE [cgk].[Tour] SET [URL]=@url WHERE [Id]=@id";
-            using (SqlConnection connection = new SqlConnection(_connectionString))
-            {
-                try
-                {
-                    connection.ExecuteScalar(sql, new { id, url });
-                    Trace.TraceInformation($"#{id} {url}");
-                }
-                catch (Exception ex)
-                {
-                    Trace.TraceError($"Exception when updating url #{id}. {ex.Message}", ex);
-                }
-            }
-        }
-
+       
         private bool Exist<T>(SqlConnection connection, T model) where T : BaseEntity
-        {
-            //string sql = "SELECT TOP 1 Id FROM cgk.Question WHERE Id=@id";
-            //return connection.ExecuteScalar<int>(sql, new { id = model.Id }) > 0;
+        {            
             return connection.Get<T>(model.Id) != null;
         }
     }

@@ -38,7 +38,7 @@ namespace SimpleEchoBot.Dialogs
                 reply.Text = "I'm done";
                 context.Done(reply);
             }
-            else if (text.Contains("tour"))
+            else if (text.Contains("tours"))
             {
                 var tours = await GetData().GetTours();
                 if (tours.Any())
@@ -69,16 +69,20 @@ namespace SimpleEchoBot.Dialogs
 
                 var tour = tourBase as Tour;
                 var tournament = tourBase as Tournament;
-                if (tour != null)
+                if (tournament != null)
                 {
-                    PromptDialog.Choice(context, ResumeAfterSelectingTour, tour.Tours.Select(x => x.ToString()), "Please select a tour:", descriptions: tour.Tours.Select(x => x.Title));
+                    PromptDialog.Choice(context, 
+                        ResumeAfterSelectingTour, 
+                        tournament.Tours.Select(x => x.ToString()), 
+                        "Please select a tour:", 
+                        descriptions: tournament.Tours.Select(x => x.Title));
                 }
-                else if (tournament != null)
+                else if (tour != null)
                 {
                     PromptDialog.Choice(context, ResumeAfterSelectingQuestion,
-                        tournament.Questions.Select(x => x.ToString()),
+                        tour.Questions.Select(x => x.ToString()),
                         "Please select a question:",
-                        descriptions: tournament.Questions.Select(x => x.Question.Substring(0, Math.Min(15, x.Question.Length)) + "..."));
+                        descriptions: tour.Questions.Select(x => x.Question.Substring(0, Math.Min(15, x.Question.Length)) + "..."));
                 }
                 else
                 {

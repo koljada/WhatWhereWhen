@@ -10,6 +10,9 @@ using System.Diagnostics;
 
 using Activity = Microsoft.Bot.Connector.Activity;
 using WhatWhereWhen.Data.Sql;
+using Autofac;
+using Microsoft.Bot.Builder.Dialogs.Internals;
+using System.Threading;
 
 namespace Microsoft.Bot.Sample.SimpleEchoBot
 {
@@ -55,7 +58,7 @@ namespace Microsoft.Bot.Sample.SimpleEchoBot
             }
         }
 
-        private Activity HandleSystemMessage(Activity message)
+        private async Task<Activity> HandleSystemMessage(Activity message)
         {
             if (message.Type == ActivityTypes.DeleteUserData)
             {
@@ -65,6 +68,36 @@ namespace Microsoft.Bot.Sample.SimpleEchoBot
             else if (message.Type == ActivityTypes.ConversationUpdate)
             {
                 Trace.TraceInformation("Conversation update");
+                ConnectorClient client = new ConnectorClient(new Uri(message.ServiceUrl));
+
+                using (ILifetimeScope scope = DialogModule.BeginLifetimeScope(Conversation.Container, message))
+                {
+                    IBotData botData = scope.Resolve<IBotData>();
+
+                    await botData.LoadAsync(CancellationToken.None);
+
+                    if (!botData.ConversationData.GetValueOrDefault<bool>("init"))
+                    {
+                        botData.ConversationData.SetValue("init", true);
+
+                        var reply = message.CreateReply("Hi!I'll post some random question every morning.");
+                        await client.Conversations.SendToConversationAsync(reply);
+
+                        var reply2 = message.CreateReply("Commands: " + Environment.NewLine +
+                            "\t\t  - type `tours` to get a list of tours;" + Environment.NewLine +
+                            "\t\t  - type `new` to get a new question;" + Environment.NewLine +
+                            "\t\t  - type `answer` to get an answer to the current question;" + Environment.NewLine +
+                            "\t\t  - type `level` to select a complexity level");
+                        await client.Conversations.SendToConversationAsync(reply2);
+
+                        var reply3 = message.CreateReply("*All questions are taken from* " + "https://db.chgk.info/" +
+                            Environment.NewLine + "Copyright: " + "https://db.chgk.info/copyright");
+                        await client.Conversations.SendToConversationAsync(reply3);
+
+                        var reply4 = message.CreateReply("Good luck! ;-)");
+                        await client.Conversations.SendToConversationAsync(reply4);
+                    }
+                }
                 // Handle conversation state changes, like members being added and removed
                 // Use Activity.MembersAdded and Activity.MembersRemoved and Activity.Action for info
                 // Not available in all channels

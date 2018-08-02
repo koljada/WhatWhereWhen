@@ -68,5 +68,7 @@ namespace WhatWhereWhen.Domain.Models
 
         //[JsonProperty("ParentTextId")]
         //public string ParentTextId { get; set; }
+
+        public override string ToString() => $"#{Id} {Title}({QuestionsNum} questions)";
     }
 }

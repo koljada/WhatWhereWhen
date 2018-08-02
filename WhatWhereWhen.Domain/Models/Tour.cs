@@ -10,6 +10,5 @@ namespace WhatWhereWhen.Domain.Models
         [JsonProperty("question")]
         public IList<QuestionItem> Questions { get; set; }
 
-        public override string ToString() => $"#{Id} {Title}({QuestionsNum} questions)";
     }
 }

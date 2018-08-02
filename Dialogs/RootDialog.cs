@@ -23,12 +23,7 @@ namespace SimpleEchoBot.Dialogs
         private const string KEY = "CURRENT_QUESTION";
         private const string KEY_LEVEL = "CURRENT_LEVEL";
         private const string TIMER = "TIMER_CANCELLATION";
-
-        private readonly string HELP = "Commands: " + Environment.NewLine +
-                    "\t\t  - type `new` to get a new question;" + Environment.NewLine +
-                    "\t\t  - type `answer` to get an answer to the current question;" + Environment.NewLine +
-                    "\t\t  - type `level` to select a complexity level";
-
+       
         private readonly string NL = Environment.NewLine;
 
         private static IQuestionData GetData() => new QuestionDataSql();
@@ -36,25 +31,9 @@ namespace SimpleEchoBot.Dialogs
         public async Task StartAsync(IDialogContext context)
         {
             Trace.TraceInformation($"RootDialog.StartAsync");
-
-            await CheckInit(context);
             context.Wait(MessageReceivedAsync);
         }
-
-        private async Task CheckInit(IDialogContext context)
-        {
-            if (!context.ConversationData.GetValueOrDefault<bool>("init"))
-            {
-                Trace.TraceInformation($"RootDialog.CheckInit - a new dialog");
-
-                context.ConversationData.SetValue("init", true);
-                await context.PostAsync("Hi! I'll post some random question every morning.");
-                await context.PostAsync(HELP);
-                await context.PostAsync("*All questions are taken from* " + "https://db.chgk.info/");
-                await context.PostAsync("Good luck ;-)");
-            }
-        }
-
+       
         private bool IsTimerFeatureEnabled() => Convert.ToBoolean(ConfigurationManager.AppSettings["TimerEnabled"]);
 
         private async Task MessageReceivedAsync(IDialogContext context, IAwaitable<IMessageActivity> result)
@@ -210,9 +189,9 @@ namespace SimpleEchoBot.Dialogs
             else if (text.Contains("help"))
             {
                 Trace.TraceInformation("RootDialog.MessageReceivedAsync: help case.");
-                await context.PostAsync(HELP);
+                await context.PostAsync("HELP");
             }
-            else if (text.Contains("tour"))
+            else if (text.Contains("tours"))
             {
                 await context.Forward(new TourDialog(), ResumeAfterNewOrderDialog, activity, CancellationToken.None);
                 return;
@@ -223,7 +202,7 @@ namespace SimpleEchoBot.Dialogs
                 Trace.TraceInformation("RootDialog.MessageReceivedAsync: other case.");
                 if (context.ConversationData.GetValueOrDefault<bool>("init2"))//must not be executed on the first run
                 {
-                    await context.PostAsync("Sorry, I did not get it." + NL + NL + HELP);
+                    await context.PostAsync("Sorry, I did not get it." + NL + NL + "HELP");
                 }
                 else
                 {
@@ -263,7 +242,7 @@ namespace SimpleEchoBot.Dialogs
 
             QuestionItem newQuestion = await new QuestionDataSql().GetRandomQuestion(conversationId, (QuestionComplexity)level);
 
-            Trace.TraceInformation($"PostNewQuestion: {newQuestion.Id}, {newQuestion.Question}, {newQuestion.Answer}");
+            Trace.TraceInformation($"PostNewQuestion: {newQuestion?.Id}, {newQuestion?.Question}, {newQuestion?.Answer}");
 
             if (newQuestion != null)
             {
