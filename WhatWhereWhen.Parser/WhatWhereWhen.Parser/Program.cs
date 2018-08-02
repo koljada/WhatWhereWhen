@@ -58,7 +58,8 @@ namespace WhatWhereWhen.Parser
             return new[] {
                 //"/tour/AUTHORS", "/tour/INTER", "/tour/SINHR", "/tour/NEPOLN", "/tour/REGION", "/tour/INET",
                 //"/tour/R100", "/tour/TELE", "/tour/TREN", "/tour/TEMA", "/tour/ERUDITK", "/tour/EF", "/tour/BESKR",
-                "/tour/SVOYAK" };
+                //
+                "/tour/INTBES","/tour/RASSBES" };
             //return new[] { "/tour/AUTHORS", "/tour/INTER", "/tour/SINHR", "/tour/NEPOLN", "/tour/REGION", "/tour/INET", "/tour/R100", "/tour/TELE", "/tour/TREN", "/tour/TEMA", "/tour/ERUDITK", "/tour/EF", "/tour/BESKR", "/tour/SVOYAK" };
         }
 
@@ -168,9 +169,18 @@ namespace WhatWhereWhen.Parser
                             token["question"] = new JArray { questions };
                         }
 
-                        tours = (token["question"] as JArray).Select(x => $"/tour/{x["ParentTextId"]}")
-                            .Distinct()
-                            .ToList();//Т
+                        if ((token["question"] as JArray).Any(x => !x["ParentTextId"].HasValues))
+                        {
+                            Tour tour = token.ToObject<Tour>();
+                            questionData.InsertTour(tour, parentTournament);
+                            return;
+                        }
+                        else
+                        {
+                            tours = (token["question"] as JArray).Select(x => $"/tour/{x["ParentTextId"]}")
+                                .Distinct()
+                                .ToList();//Т
+                        }
                     }
                     else
                     {
@@ -187,7 +197,7 @@ namespace WhatWhereWhen.Parser
 
                         token["tour"] = null;
                     }
-                   
+
 
                     token["question"] = null;
 

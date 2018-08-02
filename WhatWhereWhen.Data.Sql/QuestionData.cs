@@ -173,45 +173,68 @@ namespace WhatWhereWhen.Data.Sql
                         connection.Insert(tour);
                         state = "Inserted";
 
-                        foreach (var question in tour.Questions)
-                        {
-                            try
-                            {
-                                //Trace.TraceInformation($"Checking question #{question.Id}");
-                                if (!Exist(connection, question))
-                                {
-                                    Trace.Write(".");
-                                    //Trace.TraceInformation($"Inserting question #{question.Id}");
 
-                                    question.ParentId = tour.Id;
-                                    question.TourId = tour.Id;
-                                    question.TournamentId = tournament.Id;
-                                    question.TournamentTitle = tournament.Title;
-                                    question.ImportedAt = DateTime.UtcNow;
-
-                                    connection.Insert(question);
-                                    inserted++;
-                                }
-                                else
-                                {
-                                    Trace.Write("-");
-                                    //Trace.TraceInformation($"Question #{question.Id} already exists");
-                                    skipped++;
-                                }
-                            }
-                            catch (Exception ex)
-                            {
-                                Trace.WriteLine("");
-                                Trace.TraceError($"Exception when inserting question #{question.Id}. {ex.Message}", ex);
-                                error++;
-                            }
-                        }
                     }
                     else
                     {
                         Trace.TraceInformation($"Tounament #{tour.Id} already exists");
                         state = "Skipped";
-                    }                    
+                    }
+                    int tourId = tour.Id;
+                    int tournamentId = tournament?.Id ?? tour.ParentId;
+
+                    if (tour.Type != "Т")
+                    {
+                        int maxId = connection.ExecuteScalar<int>("SELECT MAX(Id) FROM www.Tour");
+                        var newTour = new Tour
+                        {
+                            Id = ++maxId,
+                            ParentId = tour.Id,
+                            ImportedAt = DateTime.UtcNow,
+                            Copyright = tour.Copyright,
+                            Title = tour.Title + "-auto",
+                            QuestionsNum = tour.Questions.Count,
+                            ChildrenNum = 0,
+                            Type = "Т"
+                        };
+                        connection.Insert(newTour);
+                        tourId = newTour.Id;
+                        tournamentId = tour.Id;
+                    }
+
+                    foreach (var question in tour.Questions)
+                    {
+                        try
+                        {
+                            //Trace.TraceInformation($"Checking question #{question.Id}");
+                            if (!Exist(connection, question))
+                            {
+                                Trace.Write(".");
+                                //Trace.TraceInformation($"Inserting question #{question.Id}");
+
+                                question.ParentId = tourId;
+                                question.TourId = tourId;
+                                question.TournamentId = tournamentId;
+                                question.TournamentTitle = tournament?.Title;
+                                question.ImportedAt = DateTime.UtcNow;
+
+                                connection.Insert(question);
+                                inserted++;
+                            }
+                            else
+                            {
+                                Trace.Write("-");
+                                //Trace.TraceInformation($"Question #{question.Id} already exists");
+                                skipped++;
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            Trace.WriteLine("");
+                            Trace.TraceError($"Exception when inserting question #{question.Id}. {ex.Message}", ex);
+                            error++;
+                        }
+                    }
                 }
                 catch (Exception ex)
                 {
